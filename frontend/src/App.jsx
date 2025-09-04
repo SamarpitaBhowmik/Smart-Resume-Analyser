@@ -1,18 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import ResumeUpload from "./components/ResumeUpload";
 
 function Home() {
   return (
     <div className="p-6">
       <h2 className="text-2xl font-semibold">Welcome to Career Recommender!</h2>
-    </div>
-  );
-}
-
-function Upload() {
-  return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Upload Resume</h2>
-      <input type="file" className="border p-2 rounded" />
     </div>
   );
 }
@@ -43,7 +35,7 @@ export default function App() {
         <main className="p-6">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/upload" element={<Upload />} />
+            <Route path="/upload" element={<ResumeUpload />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>

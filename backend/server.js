@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import ResumeRoutes from "./routes/ResumeRoutes.js"
 
 dotenv.config();
 
@@ -30,9 +31,11 @@ app.get("/", (req, res) => {
   res.send("Backend running...");
 });
 
+app.use("/api/resume", ResumeRoutes);
+
 // Server
 const PORT = process.env.PORT || 5000;
 
-app.listen(5000, () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
