@@ -9,9 +9,9 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGO_URI, {
       dbName: "resume-analyser",
     });
-    console.log("✅ MongoDB connected");
+    console.log("MongoDB connected");
   } catch (err) {
-    console.error("❌ Mongo error:", err.message);
+    console.error("Mongo error:", err.message);
     process.exit(1);
   }
 };
@@ -45,12 +45,12 @@ const jobs = [
 const importJobs = async () => {
   try {
     await connectDB();
-    await Job.deleteMany(); // clear existing jobs (optional)
+    await Job.deleteMany(); 
     await Job.insertMany(jobs);
-    console.log("✅ Jobs added to database!");
-    process.exit(); // exit script
+    console.log("Jobs added to database!");
+    process.exit(); 
   } catch (err) {
-    console.error("❌ Error seeding jobs:", err.message);
+    console.error("Error seeding jobs:", err.message);
     process.exit(1);
   }
 };
