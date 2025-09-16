@@ -1,18 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import ResumeUpload from "./components/ResumeUpload";
+import Dashboard from "./pages/Dashboard";
 
 function Home() {
   return (
     <div className="p-6">
       <h2 className="text-2xl font-semibold">Welcome to Career Recommender!</h2>
-    </div>
-  );
-}
-
-function Dashboard() {
-  return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold">Your Dashboard</h2>
     </div>
   );
 }
