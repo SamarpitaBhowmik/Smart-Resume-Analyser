@@ -4,6 +4,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import ResumeRoutes from "./routes/ResumeRoutes.js"
 import jobRoutes from "./routes/jobRoutes.js";
+import matchRoutes from "./routes/matchRoutes.js";
+
 
 dotenv.config();
 
@@ -34,6 +36,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/resume", ResumeRoutes);
 app.use("/api/jobs", jobRoutes);
+app.use("/api/match", matchRoutes);
+
 
 // Server
 const PORT = process.env.PORT || 5000;

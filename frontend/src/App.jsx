@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import ResumeUpload from "./components/ResumeUpload";
 import Dashboard from "./pages/Dashboard";
+import JobDetails from "./pages/JobDetails";
 
 function Home() {
   return (
@@ -16,11 +17,22 @@ export default function App() {
       <div className="min-h-screen bg-gray-50">
         {/* Navbar */}
         <nav className="bg-white shadow-md p-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-blue-600">Career Recommender</h1>
+          <h1 className="text-xl font-bold text-blue-600">
+            Career Recommender
+          </h1>
           <div className="space-x-4">
-            <Link to="/" className="hover:text-blue-600">Home</Link>
-            <Link to="/upload" className="hover:text-blue-600">Upload Resume</Link>
-            <Link to="/dashboard" className="hover:text-blue-600">Dashboard</Link>
+            <Link to="/" className="hover:text-blue-600">
+              Home
+            </Link>
+            <Link to="/upload" className="hover:text-blue-600">
+              Upload Resume
+            </Link>
+            <Link to="/dashboard" className="hover:text-blue-600">
+              Dashboard
+            </Link>
+            <Link to={`/jobDetails/68c0700a821938a8cc2dd6e7`} className="hover:text-blue-600">
+              Job Details
+            </Link>
           </div>
         </nav>
 
@@ -30,6 +42,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/upload" element={<ResumeUpload />} />
             <Route path="/dashboard" element={<Dashboard />} />
+           <Route path="/jobDetails/:id" element={<JobDetails />} />
           </Routes>
         </main>
       </div>
