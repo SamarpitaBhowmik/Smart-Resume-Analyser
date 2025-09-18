@@ -8,8 +8,8 @@ const JobDetails = () => {
   const [job, setJob] = useState(null);
   const [matchResult, setMatchResult] = useState(null);
 
-  // (for demo: hardcode resumeId, later connect to uploaded resume)
-  const resumeId = "68c8eb0ba9dafcc6ed9db12c"; 
+  // for now: hardcode resumeId, later connect to uploaded resume
+  const resumeId = "68c8eb0ba9dafcc6ed9db12c";
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -43,6 +43,7 @@ const JobDetails = () => {
         ← Back to Jobs
       </Link>
 
+      {/* Job Details */}
       <h1 className="text-2xl font-bold mt-4">{job.title}</h1>
       <p className="text-gray-700">{job.company}</p>
       <p className="text-sm text-gray-500">{job.location}</p>
@@ -51,6 +52,18 @@ const JobDetails = () => {
         <h2 className="font-semibold">Job Description:</h2>
         <p className="mt-2">{job.description}</p>
       </div>
+
+      {/* Skills Section */}
+      {Array.isArray(job.skills) && job.skills.length > 0 && (
+        <div className="mt-4">
+          <h2 className="font-semibold">Required Skills:</h2>
+          <ul className="list-disc list-inside text-blue-700">
+            {job.skills.map((skill, idx) => (
+              <li key={idx}>{String(skill)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Match Button */}
       <button

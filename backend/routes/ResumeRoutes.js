@@ -38,10 +38,10 @@ async function parseResumeAI(fileBuffer) {
     },
   ]);
 
-  // ✅ Safely extract text
+  // Safely extract text
   const rawText = result.response.candidates[0].content.parts[0].text.trim();
 
-  // ✅ Ensure only JSON is parsed
+  // Ensure only JSON is parsed
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("AI did not return valid JSON");
 
