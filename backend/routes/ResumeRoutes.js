@@ -1,77 +1,77 @@
 import express from "express";
 import multer from "multer";
-import PDFParser from "pdf2json";
 import Resume from "../models/Resume.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const router = express.Router();
-
-// Multer config (store file in memory)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// parse PDF buffer → extract text
-const parsePDF = (buffer) => {
-  return new Promise((resolve, reject) => {
-    const pdfParser = new PDFParser();
+// Gemini setup
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    pdfParser.on("pdfParser_dataError", (err) => reject(err.parserError));
-    pdfParser.on("pdfParser_dataReady", (pdfData) => {
-      
-      const text = pdfData.Pages.map((page) =>
-        page.Texts.map((t) => decodeURIComponent(t.R[0].T)).join(" ")
-      ).join("\n");
+// AI-based resume parser
+async function parseResumeAI(fileBuffer) {
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        mimeType: "application/pdf",
+        data: fileBuffer.toString("base64"),
+      },
+    },
+    {
+      text: `
+        You are an AI Resume Parser.
+        Extract ONLY valid JSON in this exact structure:
+        {
+          "name": "",
+          "skills": [],
+          "experience": [],
+          "projects": [],
+          "education": []
+        }
+      `,
+    },
+  ]);
 
-      resolve(text);
-    });
+  // ✅ Safely extract text
+  const rawText = result.response.candidates[0].content.parts[0].text.trim();
 
-    pdfParser.parseBuffer(buffer);
-  });
-};
+  // ✅ Ensure only JSON is parsed
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("AI did not return valid JSON");
 
-// Regex extractors
-const extractEmail = (text) => {
-  const match = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/);
-  return match ? match[0] : null;
-};
-
-const extractPhone = (text) => {
-  const match = text.match(/(\+?\d{1,3})?[\s-]?\d{10}/);
-  return match ? match[0] : null;
-};
-
-const extractSkills = (text) => {
-  const skillsList = ["JavaScript", "React", "Node.js", "MongoDB", "Python", "Java", "C++"];
-  return skillsList.filter((skill) => text.toLowerCase().includes(skill.toLowerCase()));
-};
+  return JSON.parse(jsonMatch[0]);
+}
 
 // POST /api/resume/upload
 router.post("/upload", upload.single("resume"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const text = await parsePDF(req.file.buffer);
-
-    const email = extractEmail(text);
-    const phone = extractPhone(text);
-    const skills = extractSkills(text);
+    const extracted = await parseResumeAI(req.file.buffer);
 
     const resume = new Resume({
       filename: req.file.originalname,
       contentType: req.file.mimetype,
       data: req.file.buffer,
-      extracted: { text, email, phone, skills },
+      extracted,
     });
 
     await resume.save();
 
     res.json({
-      message: "Resume uploaded & parsed successfully",
-      email,
-      phone,
-      skills,
+      message: "Resume uploaded & AI-parsed successfully",
+      extracted,
+      id: resume._id, // send ID so frontend can match
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("AI Resume Parsing Error:", error);
+    res.status(500).json({ error: error.message || "AI parsing failed" });
   }
 });
 
