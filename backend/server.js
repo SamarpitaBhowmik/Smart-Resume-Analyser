@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import ResumeRoutes from "./routes/ResumeRoutes.js"
 import jobRoutes from "./routes/jobRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import analysisRoutes from "./routes/analysisRoutes.js";
 
 
 dotenv.config();
@@ -37,6 +39,8 @@ app.get("/", (req, res) => {
 app.use("/api/resume", ResumeRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/match", matchRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/analysis", analysisRoutes);
 
 
 // Server
