@@ -7,6 +7,9 @@ import jobRoutes from "./routes/jobRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import analysisRoutes from "./routes/analysisRoutes.js";
+import dataRoutes from "./routes/dataRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+import { ensureResearchDatasetsReady } from "./utils/datasetPipeline.js";
 
 
 dotenv.config();
@@ -29,7 +32,6 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
-connectDB();
 
 // Routes
 app.get("/", (req, res) => {
@@ -41,11 +43,26 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/match", matchRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/analysis", analysisRoutes);
+app.use("/api/data", dataRoutes);
+app.use("/api/report", reportRoutes);
 
 
 // Server
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+async function startServer() {
+  await connectDB();
+  const validationSummary = await ensureResearchDatasetsReady();
+  console.log(
+    `Research dataset ready: ${validationSummary.cleaned.jobPostingCount} job postings, ${validationSummary.cleaned.skillFactCount} skill facts`
+  );
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Failed to start server:", error.message);
+  process.exit(1);
 });

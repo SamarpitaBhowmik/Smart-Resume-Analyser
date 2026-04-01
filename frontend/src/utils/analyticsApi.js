@@ -1,12 +1,19 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.DEV ? "/api" : "http://localhost:5000/api");
 
 async function apiCall(endpoint) {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    const data = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
     if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        typeof data === "object" && data !== null
+          ? data.error || `HTTP error! status: ${response.status}`
+          : data || `HTTP error! status: ${response.status}`
+      );
     }
     return data;
   } catch (error) {
@@ -58,5 +65,10 @@ export async function getDashboardStats() {
 // Get skill correlation
 export async function getSkillCorrelation(skill) {
   return apiCall(`/analytics/skill-correlation?skill=${encodeURIComponent(skill)}`);
+}
+
+// Get validation summary
+export async function getValidationSummary() {
+  return apiCall("/data/validation-summary");
 }
 

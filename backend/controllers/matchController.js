@@ -6,7 +6,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+// Embeddings: configurable with fallback for v1beta model availability issues.
+const PRIMARY_EMBEDDING_MODEL =
+  process.env.GEMINI_EMBEDDING_MODEL || "text-embedding-004";
+const FALLBACK_EMBEDDING_MODEL =
+  process.env.GEMINI_EMBEDDING_FALLBACK || "embedding-001";
+
+let embedModel = genAI.getGenerativeModel({ model: PRIMARY_EMBEDDING_MODEL });
 // Use model from env, or try gemini-2.5-flash (same as ResumeRoutes), with fallback to gemini-pro
 // If you get 404 errors, set GEMINI_MODEL=gemini-pro in your .env file
 const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -34,8 +40,21 @@ async function generateContentWithFallback(prompt) {
 }
 
 async function getEmbedding(text) {
-  const result = await embedModel.embedContent(text);
-  return result.embedding.values;
+  try {
+    const result = await embedModel.embedContent(text);
+    return result.embedding?.values || result.embedding || result;
+  } catch (error) {
+    const is404 = error?.status === 404 || (error?.message && error.message.includes("404"));
+    if (is404 && PRIMARY_EMBEDDING_MODEL !== FALLBACK_EMBEDDING_MODEL) {
+      console.warn(
+        `Embedding model ${PRIMARY_EMBEDDING_MODEL} not found; trying fallback ${FALLBACK_EMBEDDING_MODEL}`
+      );
+      embedModel = genAI.getGenerativeModel({ model: FALLBACK_EMBEDDING_MODEL });
+      const retry = await embedModel.embedContent(text);
+      return retry.embedding?.values || retry.embedding || retry;
+    }
+    throw error;
+  }
 }
 
 function cosineSimilarity(vecA, vecB) {

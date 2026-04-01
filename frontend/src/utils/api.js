@@ -1,8 +1,11 @@
-// Use proxy in development, or explicit URL in production
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.DEV ? "/api" : "http://localhost:5000/api");
 
-// Helper function for API calls
+export function getApiBaseUrl() {
+  return API_BASE_URL;
+}
+
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   const config = {
@@ -14,12 +17,21 @@ async function apiCall(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config);
-    const data = await response.json();
-    
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
+
     if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      const msg =
+        typeof data === "object" && data !== null
+          ? data?.details
+            ? `${data.error || "Request failed"}: ${data.details}`
+            : data?.error || `HTTP error! status: ${response.status}`
+          : data || `HTTP error! status: ${response.status}`;
+      throw new Error(msg);
     }
-    
+
     return data;
   } catch (error) {
     console.error("API call error:", error);
@@ -27,7 +39,6 @@ async function apiCall(endpoint, options = {}) {
   }
 }
 
-// Upload resume
 export async function uploadResume(file) {
   const formData = new FormData();
   formData.append("resume", file);
@@ -38,7 +49,6 @@ export async function uploadResume(file) {
   });
 }
 
-// Analyze resume against job description
 export async function analyzeResumeAndJob(resumeId, jobDescription) {
   return apiCall("/analysis/analyze", {
     method: "POST",
@@ -52,10 +62,32 @@ export async function analyzeResumeAndJob(resumeId, jobDescription) {
   });
 }
 
-// Get job suggestions based on resume
+export async function getResumeQuality(resumeId) {
+  return apiCall("/analysis/resume-quality", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      resumeId,
+    }),
+  });
+}
+
 export async function getJobSuggestions(resumeId, limit = 10) {
   return apiCall(`/analysis/job-suggestions?resumeId=${resumeId}&limit=${limit}`, {
     method: "GET",
   });
+}
+
+export async function getResearchReport(resumeId) {
+  const response = await apiCall(`/report/${resumeId}`, {
+    method: "GET",
+  });
+  return response.report;
+}
+
+export function getResearchReportPdfUrl(resumeId) {
+  return `${API_BASE_URL}/report/${resumeId}/pdf`;
 }
 

@@ -1,12 +1,12 @@
 import express from "express";
+
 import SkillsData from "../models/SkillsData.js";
 
 const router = express.Router();
 
-// Top skills overall
 router.get("/top-skills", async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = Number.parseInt(req.query.limit, 10) || 20;
     const data = await SkillsData.aggregate([
       { $group: { _id: "$skill", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
@@ -18,17 +18,31 @@ router.get("/top-skills", async (req, res) => {
   }
 });
 
-// Skills by YOE (heatmap-ready)
 router.get("/skills-by-yoe", async (req, res) => {
   try {
     const data = await SkillsData.aggregate([
       {
         $group: {
-          _id: { skill: "$skill", yoe: "$yoe" },
+          _id: {
+            skill: "$skill",
+            yoeLabel: "$yoeLabel",
+            yoeMin: "$yoeMin",
+            yoeMax: "$yoeMax",
+          },
           value: { $sum: 1 },
         },
       },
-      { $sort: { "_id.skill": 1, "_id.yoe": 1 } },
+      { $sort: { "_id.yoeMin": 1, value: -1 } },
+      {
+        $project: {
+          _id: 0,
+          skill: "$_id.skill",
+          yoeRange: "$_id.yoeLabel",
+          yoeMin: "$_id.yoeMin",
+          yoeMax: "$_id.yoeMax",
+          value: 1,
+        },
+      },
     ]);
     res.json(data);
   } catch (error) {
@@ -36,12 +50,11 @@ router.get("/skills-by-yoe", async (req, res) => {
   }
 });
 
-// Skills by Job Title
 router.get("/skills-by-title/:title", async (req, res) => {
   try {
     const title = req.params.title;
     const data = await SkillsData.aggregate([
-      { $match: { title } },
+      { $match: { title: new RegExp(title, "i") } },
       { $group: { _id: "$skill", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]);
@@ -51,7 +64,6 @@ router.get("/skills-by-title/:title", async (req, res) => {
   }
 });
 
-// Get all job titles
 router.get("/job-titles", async (req, res) => {
   try {
     const data = await SkillsData.aggregate([
@@ -64,25 +76,31 @@ router.get("/job-titles", async (req, res) => {
   }
 });
 
-// Skills distribution by YOE
 router.get("/yoe-distribution", async (req, res) => {
   try {
     const data = await SkillsData.aggregate([
       {
         $group: {
-          _id: "$yoe",
+          _id: {
+            yoeLabel: "$yoeLabel",
+            yoeMin: "$yoeMin",
+            yoeMax: "$yoeMax",
+          },
           count: { $sum: 1 },
           uniqueSkills: { $addToSet: "$skill" },
         },
       },
       {
         $project: {
-          yoe: "$_id",
+          _id: 0,
+          yoeRange: "$_id.yoeLabel",
+          yoeMin: "$_id.yoeMin",
+          yoeMax: "$_id.yoeMax",
           count: 1,
           uniqueSkillsCount: { $size: "$uniqueSkills" },
         },
       },
-      { $sort: { yoe: 1 } },
+      { $sort: { yoeMin: 1 } },
     ]);
     res.json(data);
   } catch (error) {
@@ -90,15 +108,20 @@ router.get("/yoe-distribution", async (req, res) => {
   }
 });
 
-// Top skills by YOE range
 router.get("/top-skills-by-yoe", async (req, res) => {
   try {
-    const yoe = parseFloat(req.query.yoe);
-    if (isNaN(yoe)) {
+    const requestedYoe = Number.parseInt(req.query.yoe, 10);
+    if (Number.isNaN(requestedYoe)) {
       return res.status(400).json({ error: "Invalid YOE parameter" });
     }
+
     const data = await SkillsData.aggregate([
-      { $match: { yoe } },
+      {
+        $match: {
+          yoeMin: { $lte: requestedYoe },
+          $or: [{ yoeMax: null }, { yoeMax: { $gte: requestedYoe } }],
+        },
+      },
       { $group: { _id: "$skill", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 15 },
@@ -109,71 +132,83 @@ router.get("/top-skills-by-yoe", async (req, res) => {
   }
 });
 
-// Market trends - skills growth by YOE
 router.get("/market-trends", async (req, res) => {
   try {
     const skill = req.query.skill;
     if (!skill) {
       return res.status(400).json({ error: "Skill parameter is required" });
     }
+
     const data = await SkillsData.aggregate([
-      { $match: { skill: new RegExp(skill, "i") } },
+      { $match: { skill: new RegExp(String(skill).toLowerCase(), "i") } },
       {
         $group: {
-          _id: "$yoe",
+          _id: {
+            yoeLabel: "$yoeLabel",
+            yoeMin: "$yoeMin",
+            yoeMax: "$yoeMax",
+          },
           count: { $sum: 1 },
-          titles: { $addToSet: "$title" },
+          titles: { $addToSet: "$normalizedTitle" },
         },
       },
       {
         $project: {
-          yoe: "$_id",
+          _id: 0,
+          yoeRange: "$_id.yoeLabel",
+          yoeMin: "$_id.yoeMin",
+          yoeMax: "$_id.yoeMax",
           demand: "$count",
           jobTitles: { $size: "$titles" },
         },
       },
-      { $sort: { yoe: 1 } },
+      { $sort: { yoeMin: 1 } },
     ]);
+
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Comprehensive dashboard stats
 router.get("/dashboard-stats", async (req, res) => {
   try {
-    const [
-      totalRecords,
-      uniqueSkills,
-      uniqueTitles,
-      topSkills,
-      yoeDistribution,
-      topTitles,
-    ] = await Promise.all([
-      SkillsData.countDocuments(),
-      SkillsData.distinct("skill").then((skills) => skills.length),
-      SkillsData.distinct("title").then((titles) => titles.length),
-      SkillsData.aggregate([
-        { $group: { _id: "$skill", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-      ]),
-      SkillsData.aggregate([
-        {
-          $group: {
-            _id: "$yoe",
-            count: { $sum: 1 },
+    const [totalRecords, uniqueSkills, uniqueTitles, topSkills, yoeDistribution, topTitles] =
+      await Promise.all([
+        SkillsData.countDocuments(),
+        SkillsData.distinct("skill").then((skills) => skills.length),
+        SkillsData.distinct("title").then((titles) => titles.length),
+        SkillsData.aggregate([
+          { $group: { _id: "$skill", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ]),
+        SkillsData.aggregate([
+          {
+            $group: {
+              _id: {
+                yoeLabel: "$yoeLabel",
+                yoeMin: "$yoeMin",
+              },
+              count: { $sum: 1 },
+            },
           },
-        },
-        { $sort: { _id: 1 } },
-      ]),
-      SkillsData.aggregate([
-        { $group: { _id: "$title", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-      ]),
-    ]);
+          {
+            $project: {
+              _id: 0,
+              yoeRange: "$_id.yoeLabel",
+              yoeMin: "$_id.yoeMin",
+              count: 1,
+            },
+          },
+          { $sort: { yoeMin: 1 } },
+        ]),
+        SkillsData.aggregate([
+          { $group: { _id: "$title", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ]),
+      ]);
 
     res.json({
       totalRecords,
@@ -188,7 +223,6 @@ router.get("/dashboard-stats", async (req, res) => {
   }
 });
 
-// Skill correlation - which skills appear together
 router.get("/skill-correlation", async (req, res) => {
   try {
     const skill = req.query.skill;
@@ -196,14 +230,12 @@ router.get("/skill-correlation", async (req, res) => {
       return res.status(400).json({ error: "Skill parameter is required" });
     }
 
-    // Find all job titles that require this skill
-    const titlesWithSkill = await SkillsData.distinct("title", {
-      skill: new RegExp(skill, "i"),
+    const jobIdsWithSkill = await SkillsData.distinct("jobId", {
+      skill: new RegExp(String(skill).toLowerCase(), "i"),
     });
 
-    // Find all skills in those job titles
     const correlatedSkills = await SkillsData.aggregate([
-      { $match: { title: { $in: titlesWithSkill } } },
+      { $match: { jobId: { $in: jobIdsWithSkill } } },
       { $group: { _id: "$skill", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 20 },

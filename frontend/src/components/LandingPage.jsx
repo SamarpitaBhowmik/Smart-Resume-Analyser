@@ -32,7 +32,7 @@ export default function LandingPage({ onNavigateToDashboard }) {
   const [resumeText, setResumeText] = useState("");
   const [typingIndex, setTypingIndex] = useState(0);
   const [typingStep, setTypingStep] = useState(0);
-  const [activeFeature, setActiveFeature] = useState(0);
+  const [_activeFeature, setActiveFeature] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const demoRef = useRef(null);
 

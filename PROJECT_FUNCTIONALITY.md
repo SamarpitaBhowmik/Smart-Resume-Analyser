@@ -316,14 +316,17 @@
 3. MongoDB aggregation → Processes BigData
 4. Results formatted → Sent to frontend
 5. Recharts visualizes → Charts and graphs displayed
-
+..3333333333333322
+22
 ---
 
 ## 🛠️ Technical Stack
 
 ### Backend:
 - **Framework**: Express.js
-- **Database**: MongoDB (Mongoose)
+- **Database**: MongoDB (Mongoose) 
+
+
 - **AI**: Google Gemini API
   - Models: gemini-2.5-flash, text-embedding-004
 - **File Upload**: Multer

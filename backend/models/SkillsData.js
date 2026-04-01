@@ -4,8 +4,16 @@ import mongoose from "mongoose";
 
 const SkillDataSchema = new mongoose.Schema(
   {
-     title: {
-      type: String,      // job role
+    jobId: {
+      type: String,
+      index: true,
+    },
+    title: {
+      type: String,
+      index: true
+    },
+    normalizedTitle: {
+      type: String,
       index: true
     },
     skill: {
@@ -13,14 +21,36 @@ const SkillDataSchema = new mongoose.Schema(
       required: true,
       index: true
     },
-    yoe: {
+    yoeMin: {
       type: Number,
       required: true,
+      index: true
+    },
+    yoeMax: {
+      type: Number,
+      default: null
+    },
+    yoeMid: {
+      type: Number,
+      required: true,
+      index: true
+    },
+    yoeLabel: {
+      type: String,
+      required: true,
+      index: true
+    },
+    source: {
+      type: String,
+      default: "Curated internal job-role benchmark"
+    },
+    datasetVersion: {
+      type: String,
       index: true
     }
   },
   {
-    collection: "skill_data",
+    collection: "skill_facts",
     timestamps: true
   }
 );

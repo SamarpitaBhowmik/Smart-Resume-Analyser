@@ -1,0 +1,249 @@
+{
+  "datasetVersion": "jobs-csv-2025-12-14",
+  "generatedAt": "2026-04-01T07:55:18.511Z",
+  "sourceFile": "data/jobs.csv",
+  "raw": {
+    "rowCount": 1068
+  },
+  "cleaned": {
+    "jobPostingCount": 984,
+    "skillFactCount": 12247,
+    "uniqueTitles": 218,
+    "uniqueSkills": 1782
+  },
+  "quality": {
+    "retainedRowRate": 0.9213,
+    "droppedRowCount": 84,
+    "duplicateRowsRemoved": 83,
+    "invalidYoeRows": 0,
+    "missingFieldRows": 1,
+    "topNormalizedTitles": [
+      {
+        "title": ".net Developer",
+        "count": 20
+      },
+      {
+        "title": "Ai Prompt Engineer",
+        "count": 20
+      },
+      {
+        "title": "Ar/vr Developer",
+        "count": 20
+      },
+      {
+        "title": "Blockchain Developer",
+        "count": 20
+      },
+      {
+        "title": "Content Writer",
+        "count": 20
+      },
+      {
+        "title": "Copywriter",
+        "count": 20
+      },
+      {
+        "title": "Data Engineer",
+        "count": 20
+      },
+      {
+        "title": "Digital Marketing Specialist",
+        "count": 20
+      },
+      {
+        "title": "Ethical Hacker",
+        "count": 20
+      },
+      {
+        "title": "Fintech Engineer",
+        "count": 20
+      }
+    ],
+    "topNormalizedSkills": [
+      {
+        "skill": "python",
+        "count": 355
+      },
+      {
+        "skill": "java",
+        "count": 196
+      },
+      {
+        "skill": "git",
+        "count": 160
+      },
+      {
+        "skill": "communication",
+        "count": 152
+      },
+      {
+        "skill": "sql",
+        "count": 150
+      },
+      {
+        "skill": "leadership",
+        "count": 148
+      },
+      {
+        "skill": "docker",
+        "count": 143
+      },
+      {
+        "skill": "problem-solving",
+        "count": 140
+      },
+      {
+        "skill": "aws",
+        "count": 135
+      },
+      {
+        "skill": "javascript",
+        "count": 126
+      }
+    ],
+    "yoeDistribution": [
+      {
+        "yoeLabel": "0-1",
+        "count": 320
+      },
+      {
+        "yoeLabel": "5+",
+        "count": 70
+      },
+      {
+        "yoeLabel": "0",
+        "count": 48
+      },
+      {
+        "yoeLabel": "6+",
+        "count": 35
+      },
+      {
+        "yoeLabel": "3-5",
+        "count": 35
+      },
+      {
+        "yoeLabel": "3+",
+        "count": 29
+      },
+      {
+        "yoeLabel": "4+",
+        "count": 25
+      },
+      {
+        "yoeLabel": "5-8",
+        "count": 25
+      },
+      {
+        "yoeLabel": "0-2",
+        "count": 25
+      },
+      {
+        "yoeLabel": "2-5",
+        "count": 23
+      }
+    ],
+    "droppedReasons": [
+      {
+        "reason": "duplicate_row",
+        "count": 83
+      },
+      {
+        "reason": "missing_required_field",
+        "count": 1
+      }
+    ],
+    "sampleDroppedRows": [
+      {
+        "rowNumber": 25,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 26,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 27,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 28,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 29,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 30,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 38,
+        "reason": "missing_required_field",
+        "title": null,
+        "yoe": "5–10 years"
+      },
+      {
+        "rowNumber": 107,
+        "reason": "duplicate_row",
+        "title": "Backend Developer - Entry Level",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 141,
+        "reason": "duplicate_row",
+        "title": "Big Data Specialist",
+        "yoe": "4+"
+      },
+      {
+        "rowNumber": 174,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "0-1"
+      },
+      {
+        "rowNumber": 175,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "02-May"
+      },
+      {
+        "rowNumber": 177,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "06-Oct"
+      },
+      {
+        "rowNumber": 178,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "0-1"
+      },
+      {
+        "rowNumber": 179,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "02-May"
+      },
+      {
+        "rowNumber": 180,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "05-Aug"
+      }
+    ]
+  }
+}

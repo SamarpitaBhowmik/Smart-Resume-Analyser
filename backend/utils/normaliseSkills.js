@@ -1,6 +1,13 @@
-// utils/normalizeSkills.js
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// words to remove (noise)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const skillAliasMap = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, "../data/skillAliasMap.json"), "utf8")
+);
+
 const REMOVE_WORDS = [
   "basics",
   "basic",
@@ -9,55 +16,68 @@ const REMOVE_WORDS = [
   "to",
   "introduction",
   "exposure",
-  "awareness"
+  "awareness",
+  "knowledge of",
+  "familiarity with",
 ];
 
-// skill name mapping (standardization)
-const SKILL_MAP = {
-  "js": "javascript",
-  "node": "node.js",
-  "reactjs": "react",
-  "react.js": "react",
-   "nlp": "nlp",
-  "natural language processing": "nlp",
-  "intro nlp": "nlp",
-  "to nlp": "nlp",
-  "asp.net core": "asp.net core",
-  "asp.net mvc": "asp.net mvc",
-  "sql": "sql",
-  "sql server": "sql server",
-  "postgres": "postgresql",
-  "mongo": "mongodb",
-  "hugging face": "hugging face",
-  "hf": "hugging face",
-  "ci cd": "ci/cd",
-  "ci/cd": "ci/cd",
-  "k8s": "kubernetes"
-};
+const TITLE_STOPWORDS = new Set([
+  "engineer",
+  "developer",
+  "specialist",
+  "analyst",
+  "manager",
+  "experienced",
+  "fresher",
+]);
 
-// main function
-export function normalizeSkills(skillsString) {
-  if (!skillsString) return [];
+function normalizeWhitespace(text = "") {
+  return String(text)
+    .toLowerCase()
+    .replace(/[()]/g, "")
+    .replace(/[_/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function normalizeSkill(skill = "") {
+  let normalized = normalizeWhitespace(skill);
+  REMOVE_WORDS.forEach((word) => {
+    normalized = normalized.replace(new RegExp(`\\b${word}\\b`, "g"), "");
+  });
+  normalized = normalized.replace(/\s+/g, " ").trim();
+  return skillAliasMap[normalized] || normalized;
+}
+
+export function normalizeTitle(title = "") {
+  const normalized = normalizeWhitespace(title)
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const tokens = normalized
+    .split(" ")
+    .filter(Boolean)
+    .filter((token) => !TITLE_STOPWORDS.has(token));
+
+  return tokens.join(" ") || normalized;
+}
+
+export function normalizeSkills(skillsValue) {
+  if (!skillsValue) return [];
+
+  const source = Array.isArray(skillsValue) ? skillsValue.join(";") : String(skillsValue);
 
   return [
     ...new Set(
-      skillsString
-        .split(";") // split skills
-        .map(skill =>
-          skill
-            .toLowerCase()
-            .replace(/[()]/g, "")
-            .replace(/\s+/g, " ")
-            .trim()
-        )
-        .map(skill => {
-          REMOVE_WORDS.forEach(word => {
-            skill = skill.replace(new RegExp(`\\b${word}\\b`, "g"), "");
-          });
-          return skill.trim();
-        })
-        .map(skill => SKILL_MAP[skill] || skill)
-        .filter(skill => skill.length > 1)
-    )
+      source
+        .split(/[;,]/)
+        .map((skill) => normalizeSkill(skill))
+        .filter((skill) => skill.length > 1)
+    ),
   ];
+}
+
+export function canonicalSkillSet(skillsValue) {
+  return new Set(normalizeSkills(skillsValue));
 }
