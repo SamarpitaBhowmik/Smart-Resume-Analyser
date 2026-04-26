@@ -80,6 +80,19 @@ export async function getJobSuggestions(resumeId, limit = 10) {
   });
 }
 
+export async function getRoadmap(resumeId, focusSkill = null) {
+  return apiCall("/analysis/roadmap", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      resumeId,
+      focusSkill,
+    }),
+  });
+}
+
 export async function getResearchReport(resumeId) {
   const response = await apiCall(`/report/${resumeId}`, {
     method: "GET",

@@ -17,7 +17,9 @@ async function main() {
   console.log(`Dataset version: ${summary.datasetVersion}`);
   console.log(`Job postings: ${summary.cleaned.jobPostingCount}`);
   console.log(`Skill facts: ${summary.cleaned.skillFactCount}`);
+  console.log(`Course catalog entries: ${summary.cleaned.courseCatalogCount}`);
   console.log(`Validation summary: ${paths.validationSummaryPath}`);
+  console.log(`Processed course catalog: ${paths.courseCatalogPath}`);
   await mongoose.disconnect();
 }
 

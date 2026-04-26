@@ -22,6 +22,19 @@ async function apiCall(endpoint) {
   }
 }
 
+export async function getUserMarketInsights(resumeId, focusSkill = null) {
+  const params = new URLSearchParams();
+  params.set("resumeId", resumeId);
+  if (focusSkill) params.set("focusSkill", focusSkill);
+  return apiCall(`/analytics/user-insights?${params.toString()}`);
+}
+
+export async function getGlobalMarketInsights(focusSkill = null) {
+  const params = new URLSearchParams();
+  if (focusSkill) params.set("focusSkill", focusSkill);
+  return apiCall(`/analytics/global-insights${params.toString() ? `?${params.toString()}` : ""}`);
+}
+
 // Get top skills
 export async function getTopSkills(limit = 20) {
   return apiCall(`/analytics/top-skills?limit=${limit}`);

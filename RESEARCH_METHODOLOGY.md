@@ -46,18 +46,27 @@ Current processed output from the local dataset:
 ## Hybrid Matching Formula
 Job recommendation and JD analysis use the same explainable scoring logic:
 
-`final_score = 0.50 * skill_coverage + 0.30 * semantic_similarity + 0.20 * experience_alignment`
+`final_score = 0.35 * exact_skill_coverage + 0.20 * skill_level_fit + 0.20 * semantic_similarity + 0.15 * experience_alignment + 0.10 * role_cooccurrence_fit`
 
 ### Components
-- `skill_coverage`: exact canonical overlap between resume skills and role skills
+- `exact_skill_coverage`: exact canonical overlap between resume skills and role skills
+- `skill_level_fit`: experience-aware maturity fit for required skills using benchmark expectations
 - `semantic_similarity`: embedding similarity when available, with lexical fallback
 - `experience_alignment`: fit between estimated resume experience and normalized role YOE range
+- `role_cooccurrence_fit`: whether the candidate’s skill bundle resembles benchmark role bundles
 
 ### Baselines Preserved
 For research comparison and ablation:
 
 - exact-overlap-only baseline
 - embeddings-only baseline
+
+## Course Catalog Dataset (Roadmap Evidence)
+Roadmap generation is backed by a normalized learning catalog prepared from `Online_Courses.csv` plus curated fallback entries:
+
+- `backend/data/processed/course_catalog.json`
+
+The dataset pipeline validates URLs, normalizes course metadata, infers skills when the raw dataset leaves skill fields blank, and produces summary quality metrics.
 
 ## Resume Quality Scoring
 Resume quality is intentionally kept separate from job-fit score.

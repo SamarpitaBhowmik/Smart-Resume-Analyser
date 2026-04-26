@@ -1,255 +1,137 @@
-# CareerAlign - Technical Implementation Documentation
+# CareerAlign - Technical Implementation (Current System)
 
-## System Architecture Overview
+This document describes the current implementation as shipped in the repository (backend routes/controllers/utils, frontend screens, and research dataset pipeline).
 
-**CareerAlign** is a full-stack web application built with a **MERN-like stack** (MongoDB, Express, React, Node.js) with AI integration. The system follows a **3-tier architecture**:
+If you want algorithm deep-dives and formulas, see `algorithms.md`.
 
-1. **Presentation Layer** (Frontend - React)
-2. **Application Layer** (Backend - Express.js + AI Services)
-3. **Data Layer** (MongoDB + CSV BigData)
+## Architecture (Runtime)
 
----
+### High-level components
+- **Frontend**: React (Vite) single-page app with 5 routes (`/`, `/dashboard`, `/resume-recommendations`, `/analytics`, `/report/:resumeId`)
+- **Backend**: Express API server with MongoDB persistence and research dataset bootstrap
+- **Data layer**:
+  - MongoDB: resumes + processed skill facts (for aggregation endpoints)
+  - Processed artifacts on disk: job postings, skill facts, course catalog, validation summary
+- **AI (selective)**:
+  - Gemini: PDF resume parsing
+  - Embeddings: semantic similarity when available (fallback exists)
+  - JD extraction: Gemini used only as low-confidence fallback
 
-## 🏗️ System Architecture
+## Backend Boot Sequence
 
-```
-┌─────────────────┐
-│   React Frontend │
-│   (Vite + React) │
-└────────┬─────────┘
-         │ HTTP/REST API
-         ▼
-┌─────────────────┐
-│  Express Backend │
-│   (Node.js)      │
-└────────┬─────────┘
-         │
-    ┌────┴────┐
-    │         │
-    ▼         ▼
-┌────────┐ ┌──────────────┐
-│ MongoDB│ │ Gemini AI API│
-│Database│ │ (Embeddings) │
-└────────┘ └──────────────┘
-```
+### `backend/server.js`
+On startup:
+1. Connects to MongoDB (`MONGO_URI`, dbName `resume-analyser`)
+2. Runs `ensureResearchDatasetsReady()` which:
+   - validates/generates processed artifacts
+   - loads processed skill facts into MongoDB when needed
+3. Starts the Express server and mounts routes:
+   - `/api/resume`, `/api/analysis`, `/api/analytics`, `/api/data`, `/api/report`, plus legacy `/api/jobs` and `/api/match`
 
----
+## Core Backend APIs
 
-## 📊 Data Flow Architecture
+### Resume
+- **`POST /api/resume/upload`**
+  - Uploads PDF (`multipart/form-data`)
+  - Parses with Gemini into a strict JSON schema
+  - Normalizes arrays and rejects malformed “code-like” strings
+  - Saves `Resume` document with `extracted` payload
 
-### Complete User Journey Flow:
+### Analysis
+- **`POST /api/analysis/analyze`**
+  - Loads resume
+  - Extracts job requirements deterministically first (`jobRequirementExtractor.js`)
+  - Estimates resume experience years
+  - Computes `hybrid-v2` scoring breakdown
+  - Computes resume quality score (`resumeQuality.js`)
+  - Builds missing-skill priority ranking (`skillPriorityEngine.js`)
+  - Builds roadmap (`roadmap-v2`) from curated catalog (`roadmapBuilder.js`)
+  - Persists to `resume.latestAnalysis` and `resume.latestResumeQuality`
 
-```
-1. User uploads PDF resume
-   ↓
-2. Frontend sends file to backend (multipart/form-data)
-   ↓
-3. Backend receives file → Gemini AI parses PDF
-   ↓
-4. Extracted data saved to MongoDB (Resume collection)
-   ↓
-5. Resume ID returned to frontend
-   ↓
-6. User enters job description
-   ↓
-7. Frontend sends {resumeId, jobDescription} to backend
-   ↓
-8. Backend:
-   a. Fetches resume from DB
-   b. Gemini AI extracts skills from JD
-   c. Creates embeddings for resume skills & job skills
-   d. Calculates cosine similarity (match score)
-   e. Gemini AI identifies missing skills
-   f. Gemini AI generates upskilling roadmap
-   ↓
-9. Backend also queries job database with semantic search
-   ↓
-10. All results sent to frontend
-    ↓
-11. Frontend displays:
-    - Match score with progress bar
-    - Matched skills (green badges)
-    - Missing skills (red badges)
-    - Upskilling roadmap (courses, projects, resources)
-    - Job suggestions (sorted by match score)
-```
+- **`POST /api/analysis/resume-quality`**
+  - Computes resume quality from extracted evidence (statement-level heuristics)
 
----
+- **`POST /api/analysis/roadmap`**
+  - Builds/refreshes roadmap for an optional `focusSkill`
 
-## 🔧 Backend Implementation
+- **`GET /api/analysis/job-suggestions?resumeId=...&limit=...`**
+  - Scores benchmark roles for the resume
+  - Returns a recommendation score plus confidence and explanation
 
-### 1. Server Setup (`server.js`)
+### Analytics
+Analytics has two “insight” endpoints that power the current UI:
 
-**Purpose**: Main entry point, configures Express server and routes
+- **`GET /api/analytics/global-insights?focusSkill=...`**
+  - Benchmark-only mode (no resume required)
+  - Returns top skills, role families, YOE distribution + a spotlight skill deep-dive
 
-**Key Implementation**:
-```javascript
-// Express app initialization
-const app = express();
+- **`GET /api/analytics/user-insights?resumeId=...&focusSkill=...`**
+  - Candidate mode (requires resume)
+  - Returns a contextual payload: priority chart, demand curve, adjacency series, maturity diagnostic, role-lift simulation, roadmap linkage
 
-// Middleware Configuration
-app.use(cors());                    // Enable CORS for frontend
-app.use(express.json());            // Parse JSON request bodies
+Legacy aggregation endpoints remain available (top skills, trends, correlation, etc.) and are used for simpler research checks.
 
-// MongoDB Connection
-const connectDB = async () => {
-  await mongoose.connect(process.env.MONGO_URI, {
-    dbName: "resume-analyser"
-  });
-};
-```
+### Data & Reporting
+- **`GET /api/data/validation-summary`**
+  - Returns dataset version and cleaning/quality metrics
 
-**Why this approach**:
-- **CORS**: Allows frontend (different port) to access backend
-- **express.json()**: Parses JSON bodies automatically
-- **Async connection**: Non-blocking database connection
-- **Environment variables**: Secure configuration management
+- **`GET /api/report/:resumeId`**
+- **`GET /api/report/:resumeId/pdf`**
+  - Builds a single report object (analysis + quality + roadmap + jobs + validation snapshot + methodology)
+  - PDF generator formats key report sections for export
 
----
+## Research Dataset Pipeline
 
-### 2. Resume Upload & Parsing (`routes/ResumeRoutes.js`)
+### `backend/utils/datasetPipeline.js`
+Inputs:
+- `backend/data/jobs.csv`
+- `backend/data/Online_Courses.csv`
 
-#### **Function: `parseResumeAI(fileBuffer)`**
+Outputs:
+- `backend/data/processed/job_postings.json`
+- `backend/data/processed/skill_facts.json`
+- `backend/data/processed/course_catalog.json`
+- `backend/data/processed/validation-summary.json`
 
-**Purpose**: Uses Gemini AI to extract structured data from PDF
+Key validations:
+- required-field checks
+- YOE parsing and normalization
+- title normalization + dedupe
+- skill normalization (canonical skill forms)
+- course metadata normalization, URL validation, skill inference when missing
+- cross-dataset consistency checks (job skills vs course skills)
 
-**Algorithm**:
-```javascript
-async function parseResumeAI(fileBuffer) {
-  // 1. Convert PDF to base64
-  const base64Data = fileBuffer.toString("base64");
-  
-  // 2. Send to Gemini with PDF + extraction prompt
-  const result = await model.generateContent([
-    {
-      inlineData: {
-        mimeType: "application/pdf",
-        data: base64Data
-      }
-    },
-    {
-      text: "Extract JSON: {name, skills[], experience[], projects[], education[]}"
-    }
-  ]);
-  
-  // 3. Extract JSON from response
-  const rawText = result.response.candidates[0].content.parts[0].text;
-  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  
-  // 4. Parse and normalize
-  const parsed = JSON.parse(jsonMatch[0]);
-  // Normalize arrays (handle strings, objects, arrays)
-  
-  return parsed;
-}
-```
+## Frontend Implementation (What calls what)
 
-**Key Technical Decisions**:
-- **Base64 encoding**: Gemini API requires base64 for binary data
-- **JSON extraction**: Uses regex to extract JSON from AI response (handles markdown, extra text)
-- **Normalization function**: Handles different data formats (strings vs objects vs arrays)
-- **Error handling**: Try-catch with fallback values
+### `frontend/src/utils/api.js`
+- Wraps API calls for upload, analyze, roadmap, suggestions, report (and report PDF url)
 
-**Why this approach**:
-- **Gemini multimodal**: Can process PDFs directly (no OCR needed)
-- **Structured output**: Forces AI to return JSON for easy parsing
-- **Flexible schema**: Handles various resume formats
+### `frontend/src/utils/analyticsApi.js`
+- Calls `/analytics/global-insights` and `/analytics/user-insights`
+- Also exposes legacy aggregation endpoints for optional charts/tests
 
----
+### Screens
+- **Dashboard (`/dashboard`)**: orchestrates upload → analyze → suggestions → roadmap → report fetch (with local snapshot fallback)
+- **ResumeRecommendations (`/resume-recommendations`)**: resume-only recommendation workflow
+- **Analytics (`/analytics`)**: global vs user mode based on presence of `resumeId` query param
+- **Report (`/report/:resumeId`)**: loads and caches the report; supports PDF export
 
-#### **Function: `normalizeArray(field)`**
+## Environment Variables
 
-**Purpose**: Ensures all array fields are proper arrays, handles edge cases
+Backend:
+- `MONGO_URI` (required)
+- `GEMINI_API_KEY` (required for PDF parsing; embeddings if enabled)
+- `GEMINI_MODEL` (optional, default `gemini-2.5-flash`)
+- `GEMINI_EMBEDDING_MODEL` (optional, default `text-embedding-004`)
+- `GEMINI_EMBEDDING_FALLBACK` (optional, default `embedding-001`)
+- `PORT` (optional, default `5000`)
 
-**Algorithm**:
-```javascript
-const normalizeArray = (field) => {
-  if (!field) return [];
-  if (Array.isArray(field)) return field;
-  
-  if (typeof field === 'string') {
-    // Try parsing if it's stringified JSON
-    try {
-      const parsed = JSON.parse(field);
-      return Array.isArray(parsed) ? parsed : [parsed];
-    } catch (e) {
-      return [field]; // Plain string, wrap in array
-    }
-  }
-  
-  return [field]; // Object, wrap in array
-};
-```
+Frontend:
+- `VITE_API_BASE_URL` (optional; defaults to `/api` in dev, `http://localhost:5000/api` otherwise)
 
-**Why this is important**:
-- **Data consistency**: MongoDB schema expects arrays
-- **Handles AI variations**: AI might return strings or objects
-- **Prevents errors**: Avoids MongoDB cast errors
-
----
-
-### 3. Resume & Job Analysis (`controllers/analysisController.js`)
-
-#### **Function: `analyzeResumeAndJob(req, res)`**
-
-**Purpose**: Main analysis function - compares resume with job description
-
-**Step-by-Step Algorithm**:
-
-```javascript
-export const analyzeResumeAndJob = async (req, res) => {
-  // STEP 1: Validate inputs
-  const { resumeId, jobDescription } = req.body;
-  
-  // STEP 2: Fetch resume from database
-  const resume = await Resume.findById(resumeId);
-  const resumeSkills = resume.extracted?.skills || [];
-  
-  // STEP 3: Extract skills from job description using AI
-  const extractSkillsPrompt = `
-    Extract technical skills from job description.
-    Return JSON array: ["Skill1", "Skill2"]
-  `;
-  const skillsResponse = await flashModel.generateContent(extractSkillsPrompt);
-  const jobSkills = safeParseJSON(extractTextFromGemini(skillsResponse.response), []);
-  
-  // STEP 4: Semantic Matching using Embeddings
-  const resumeSkillsText = resumeSkills.join(", ");
-  const jobSkillsText = jobSkills.join(", ");
-  
-  // Create embeddings (vector representations)
-  const resumeEmbedding = await getEmbedding(resumeSkillsText);
-  const jobEmbedding = await getEmbedding(jobSkillsText);
-  
-  // Calculate similarity
-  const similarity = cosineSimilarity(resumeEmbedding, jobEmbedding);
-  const matchPercent = Math.round(similarity * 100);
-  
-  // STEP 5: Identify missing skills using AI
-  const missingPrompt = `
-    Job requires: ${jobSkills}
-    Resume has: ${resumeSkills}
-    Return missing skills as JSON array
-  `;
-  const missingSkills = await getMissingSkills(missingPrompt);
-  
-  // STEP 6: Generate upskilling plan
-  const upskillingPlan = await generateUpskillingPlan(missingSkills);
-  
-  // STEP 7: Return comprehensive results
-  return {
-    match: { percentage, matchedSkills, missingSkills },
-    upskillingPlan,
-    resumeData
-  };
-};
-```
-
-**Why this multi-step approach**:
-- **Separation of concerns**: Each step has single responsibility
-- **Error handling**: Can catch errors at each step
-- **Modularity**: Easy to modify individual steps
-- **Performance**: Can optimize each step independently
+## Local Verification
+- Backend: `cd backend && npm test`
+- Frontend: `cd frontend && npm run lint`
 
 ---
 

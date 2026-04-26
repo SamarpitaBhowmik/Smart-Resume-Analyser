@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 
 import { transformRows } from "../utils/datasetPipeline.js";
+import { extractJobRequirements } from "../utils/jobRequirementExtractor.js";
 import {
   buildHybridScore,
+  buildRecommendationConfidence,
   buildSkillComparison,
+  computeDemandAlignment,
   computeExperienceAlignment,
+  computeTitleAlignment,
 } from "../utils/jobMatching.js";
 import { normalizeSkill, normalizeSkills, normalizeTitle } from "../utils/normaliseSkills.js";
+import { buildEvidenceBackedRoadmap } from "../utils/roadmapBuilder.js";
 import { analyzeResumeQualityFromExtracted } from "../utils/resumeQuality.js";
+import { buildSkillPriorityRanking } from "../utils/skillPriorityEngine.js";
 import { parseYoeRange } from "../utils/yoe.js";
 
 let failed = false;
@@ -15,6 +21,17 @@ let failed = false;
 function runTest(name, fn) {
   try {
     fn();
+    console.log(`PASS ${name}`);
+  } catch (error) {
+    failed = true;
+    console.error(`FAIL ${name}`);
+    console.error(error);
+  }
+}
+
+async function runAsyncTest(name, fn) {
+  try {
+    await fn();
     console.log(`PASS ${name}`);
   } catch (error) {
     failed = true;
@@ -89,11 +106,44 @@ runTest("computeExperienceAlignment rewards in-range experience", () => {
 
 runTest("buildHybridScore follows the weighted formula", () => {
   const score = buildHybridScore({
-    skillCoverageScore: 80,
-    semanticSimilarityScore: 70,
-    experienceAlignmentScore: 60,
+    exactSkillCoverageScore: 80,
+    skillLevelFitScore: 70,
+    semanticSimilarityScore: 60,
+    experienceAlignmentScore: 50,
+    roleCooccurrenceFitScore: 40,
   });
-  assert.equal(score, 73);
+  assert.equal(score, 66);
+});
+
+runTest("computeTitleAlignment rewards target role family overlap", () => {
+  const result = computeTitleAlignment({
+    targetTitleCandidates: ["data analyst", "business intelligence analyst"],
+    jobTitle: "Data Analyst",
+    jobNormalizedTitle: "data analyst",
+  });
+
+  assert.ok(result.score >= 75);
+});
+
+runTest("computeDemandAlignment favors stronger matched-demand coverage", () => {
+  const result = computeDemandAlignment({
+    matchedCanonical: ["python", "sql"],
+    missingCanonical: ["tableau"],
+  });
+
+  assert.ok(result.score > 40);
+});
+
+runTest("buildRecommendationConfidence summarizes suggestion confidence", () => {
+  const result = buildRecommendationConfidence({
+    exactSkillCoverageScore: 82,
+    skillLevelFitScore: 76,
+    experienceAlignmentScore: 88,
+    titleAlignmentScore: 91,
+  });
+
+  assert.ok(result.score >= 80);
+  assert.equal(result.label, "High confidence");
 });
 
 runTest("resume quality scoring rewards quantified action-oriented bullets", () => {
@@ -126,16 +176,109 @@ runTest("transformRows drops missing fields, invalid YOE values, and duplicates"
     { Title: "", YOE: "2+", Skills: "Python" },
     { Title: "Backend Developer", YOE: "experienced", Skills: "Node.js" },
     { Title: "Frontend Engineer", YOE: "03-May", Skills: "ReactJS, JavaScript" },
+  ], [
+    {
+      Title: "Applied SQL Analytics",
+      URL: "https://example.com/sql",
+      "Short Intro": "Build dashboards with SQL and Tableau",
+      Skills: "SQL, Tableau, Dashboards",
+      "Course Type": "Guided Project",
+      Level: "Beginner",
+      Duration: "Approximately 2 weeks to complete",
+      Site: "Coursera",
+      Prequisites: "Excel basics",
+    },
+    {
+      Title: "Applied SQL Analytics",
+      URL: "https://example.com/sql",
+      Skills: "SQL, Tableau",
+      "Course Type": "Guided Project",
+      Site: "Coursera",
+    },
+    {
+      Title: "",
+      URL: "https://example.com/missing-title",
+      Skills: "Python",
+    },
+    {
+      Title: "Machine Learning Foundations",
+      URL: "https://example.com/ml",
+      Category: "Data Science",
+      "Sub-Category": "Machine Learning",
+      Skills: "",
+      "Course Type": "Specialization",
+      Site: "Coursera",
+    },
   ]);
 
   assert.equal(dataset.jobPostings.length, 2);
   assert.equal(dataset.validationSummary.cleaned.jobPostingCount, 2);
+  assert.equal(dataset.validationSummary.datasets.courses.cleaned.rawCourseCount, 2);
   assert.equal(dataset.validationSummary.quality.duplicateRowsRemoved, 1);
   assert.equal(dataset.validationSummary.quality.missingFieldRows, 1);
   assert.equal(dataset.validationSummary.quality.invalidYoeRows, 1);
+  assert.equal(dataset.validationSummary.datasets.courses.quality.duplicateRowsRemoved, 1);
+  assert.equal(dataset.validationSummary.datasets.courses.quality.missingTitleRows, 1);
+  assert.equal(dataset.validationSummary.datasets.courses.quality.inferredSkillRows, 1);
+  assert.ok(dataset.validationSummary.consistency.sharedSkillCount >= 1);
   assert.equal(dataset.validationSummary.quality.retainedRowRate, 0.4);
   assert.equal(dataset.jobPostings[1].yoeLabel, "3-5");
   assert.deepEqual(dataset.jobPostings[1].skills, ["react", "javascript"]);
+  assert.equal(dataset.courseCatalog[0].format, "project");
+  assert.deepEqual(dataset.courseCatalog[0].skills_covered.slice(0, 2), ["sql", "tableau"]);
+});
+
+runTest("skill priority ranking keeps evidence for each missing skill", () => {
+  const result = buildSkillPriorityRanking({
+    missingCanonicalSkills: ["aws", "docker", "kubernetes"],
+    targetCanonicalSkills: ["python", "docker", "aws", "kubernetes"],
+    resumeCanonicalSkills: ["python", "git", "linux"],
+    resumeYears: 1.5,
+    targetYoeMin: 2,
+    targetYoeMax: 4,
+    targetTitleCandidates: ["devops engineer"],
+    focusSkill: "aws",
+  });
+
+  assert.equal(result.ranking.length, 3);
+  assert.ok(result.ranking.every((item) => typeof item.priorityScore === "number"));
+  assert.ok(result.ranking.every((item) => item.selectedBecause.length > 0));
+  assert.equal(result.focusSkill, "aws");
+});
+
+runTest("roadmap generation is deterministic and evidence-backed", () => {
+  const input = {
+    resumeCanonicalSkills: ["python", "sql", "git"],
+    resumeYears: 1,
+    targetCanonicalSkills: ["python", "sql", "tableau", "power bi"],
+    missingCanonicalSkills: ["tableau", "power bi"],
+    targetYoeMin: 1,
+    targetYoeMax: 3,
+    targetTitleCandidates: ["data analyst"],
+    focusSkill: "tableau",
+  };
+
+  const first = buildEvidenceBackedRoadmap(input);
+  const second = buildEvidenceBackedRoadmap(input);
+
+  assert.deepEqual(first, second);
+  assert.equal(first.focusSkill, "tableau");
+  assert.ok(first.priorityRanking.length >= 1);
+  assert.ok(
+    [...first.courses, ...first.projects, ...first.resources].every(
+      (item) => item.targetSkill && item.selectedBecause?.length
+    )
+  );
+});
+
+await runAsyncTest("job requirement extraction prefers deterministic extraction for common skills", async () => {
+  const result = await extractJobRequirements(
+    "We are hiring a Data Analyst with SQL, Tableau, Python, dashboards, and communication skills."
+  );
+
+  assert.ok(result.skills.length >= 3);
+  assert.equal(result.usedGeminiFallback, false);
+  assert.ok(result.extractionMethod.startsWith("deterministic"));
 });
 
 if (failed) {

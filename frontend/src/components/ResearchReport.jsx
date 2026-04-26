@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -34,6 +34,7 @@ import {
 } from "../utils/api.js";
 
 const COLORS = ["#38bdf8", "#60a5fa", "#34d399", "#f59e0b", "#f97316", "#f43f5e"];
+const REPORT_CACHE_PREFIX = "careeralign-report:";
 
 function scoreTone(score = 0) {
   if (score >= 80) {
@@ -64,7 +65,7 @@ function SummaryCard({ label, value, note, icon, score }) {
   const tone = typeof score === "number" ? scoreTone(score) : null;
 
   return (
-    <div className="rounded-2xl border border-slate-700/60 bg-slate-900/70 p-5 shadow-xl">
+    <div className="app-panel-soft rounded-2xl p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="rounded-xl border border-slate-700 bg-slate-800/80 p-2">
           {React.createElement(icon, { className: "h-5 w-5 text-sky-300" })}
@@ -84,7 +85,7 @@ function SummaryCard({ label, value, note, icon, score }) {
 
 function Section({ title, subtitle, icon, children }) {
   return (
-    <section className="rounded-2xl border border-slate-700/60 bg-slate-900/70 p-6 shadow-xl">
+    <section className="app-panel rounded-2xl p-6">
       <div className="mb-5 flex items-start gap-3">
         <div className="rounded-xl border border-slate-700 bg-slate-800/80 p-2">
           {React.createElement(icon, { className: "h-5 w-5 text-sky-300" })}
@@ -133,11 +134,20 @@ function SkillChip({ value, tone = "sky" }) {
 
 export default function ResearchReport() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { resumeId } = useParams();
+  const initialReport = location.state?.report || (() => {
+    try {
+      const cached = sessionStorage.getItem(`${REPORT_CACHE_PREFIX}${resumeId}`);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  })();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [report, setReport] = useState(null);
+  const [report, setReport] = useState(initialReport);
 
   useEffect(() => {
     let mounted = true;
@@ -149,10 +159,17 @@ export default function ResearchReport() {
         const data = await getResearchReport(resumeId);
         if (mounted) {
           setReport(data);
+          try {
+            sessionStorage.setItem(`${REPORT_CACHE_PREFIX}${resumeId}`, JSON.stringify(data));
+          } catch (error) {
+            console.error("Failed to cache report:", error);
+          }
         }
       } catch (loadError) {
         if (mounted) {
-          setError(loadError.message || "Failed to load research report.");
+          if (!initialReport) {
+            setError(loadError.message || "Failed to load the report.");
+          }
         }
       } finally {
         if (mounted) {
@@ -165,7 +182,7 @@ export default function ResearchReport() {
     return () => {
       mounted = false;
     };
-  }, [resumeId]);
+  }, [resumeId, initialReport]);
 
   const weakStatements = useMemo(() => {
     const statements = report?.resumeQuality?.statements || [];
@@ -181,10 +198,12 @@ export default function ResearchReport() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+      <div className="app-shell">
+        <div className="app-content flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-sky-300" />
           <p className="text-sm text-slate-400">Building the research report...</p>
+        </div>
         </div>
       </div>
     );
@@ -192,7 +211,8 @@ export default function ResearchReport() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+      <div className="app-shell">
+        <div className="app-content flex min-h-screen items-center justify-center">
         <div className="max-w-xl rounded-2xl border border-rose-500/30 bg-slate-900/80 p-8 text-center shadow-2xl">
           <AlertCircle className="mx-auto mb-4 h-10 w-10 text-rose-300" />
           <h1 className="text-xl font-semibold text-white">Report unavailable</h1>
@@ -203,6 +223,7 @@ export default function ResearchReport() {
           >
             Back to dashboard
           </button>
+        </div>
         </div>
       </div>
     );
@@ -217,8 +238,9 @@ export default function ResearchReport() {
   const marketEvidence = report?.marketEvidence || {};
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
-      <div className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+    <div className="app-shell">
+      <div className="app-content">
+      <div className="app-topbar">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
           <div className="flex items-center gap-4">
             <button
@@ -229,15 +251,22 @@ export default function ResearchReport() {
             </button>
             <div>
               <div className="text-xs font-medium uppercase tracking-[0.2em] text-sky-300">
-                CareerAlign Research Report
+                CareerAlign Report
               </div>
-              <h1 className="mt-1 text-2xl font-semibold text-white">Explainable candidate analysis</h1>
+              <h1 className="mt-1 text-2xl font-semibold text-white">Candidate summary</h1>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/analytics")}
+              onClick={() => {
+                const params = new URLSearchParams();
+                params.set("resumeId", resumeId);
+                if (summary.highestImpactMissingSkill) {
+                  params.set("skill", summary.highestImpactMissingSkill);
+                }
+                navigate(`/analytics?${params.toString()}`);
+              }}
               className="rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-sky-500/40 hover:text-white"
             >
               Open analytics
@@ -254,11 +283,11 @@ export default function ResearchReport() {
       </div>
 
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
-        <div className="rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(2,6,23,0.98))] p-7 shadow-2xl">
+        <div className="app-hero rounded-3xl p-7 shadow-2xl">
           <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
             <div>
               <div className="text-xs font-medium uppercase tracking-[0.2em] text-sky-300">
-                Research-backed decision support
+                Executive overview
               </div>
               <h2 className="mt-3 text-3xl font-semibold text-white">
                 {resume.name || "Candidate profile"} benchmarked with hybrid explainable matching
@@ -272,7 +301,7 @@ export default function ResearchReport() {
             </div>
 
             <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-5">
-              <div className="text-sm font-medium text-slate-200">Reproducibility metadata</div>
+              <div className="text-sm font-medium text-slate-200">Report details</div>
               <div className="mt-4 space-y-3 text-sm text-slate-400">
                 <div className="flex items-center justify-between gap-4">
                   <span>Algorithm version</span>
@@ -283,8 +312,8 @@ export default function ResearchReport() {
                   <span className="font-medium text-white">{report?.metadata?.resumeQualityVersion}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span>Dataset version</span>
-                  <span className="font-medium text-white">{report?.metadata?.datasetVersion}</span>
+                  <span>Data snapshot</span>
+                  <span className="font-medium text-white">{report?.metadata?.datasetVersion ? "Included" : "Not available"}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <span>Generated at</span>
@@ -316,7 +345,7 @@ export default function ResearchReport() {
             icon={Briefcase}
             label="Best-Fit Role"
             value={summary.bestFitRole || "Not determined"}
-            note="Highest-ranked benchmark role from the curated recommendation dataset."
+            note="Top recommended role from the benchmark role set."
           />
           <SummaryCard
             icon={TrendingUp}
@@ -329,7 +358,7 @@ export default function ResearchReport() {
         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
           <Section
             title="Candidate snapshot"
-            subtitle="Structured resume facts used in the research report."
+            subtitle="Structured resume facts used to build this summary."
             icon={FileText}
           >
             <div className="grid gap-4 md:grid-cols-2">
@@ -360,9 +389,14 @@ export default function ResearchReport() {
                 <div className="text-sm text-slate-400">Role-match evidence</div>
                 <div className="mt-4 space-y-4">
                   <ScoreBar
-                    label="Skill coverage"
-                    value={analysis.match?.skillCoverageScore || 0}
+                    label="Exact skill coverage"
+                    value={analysis.match?.exactSkillCoverageScore || analysis.match?.skillCoverageScore || 0}
                     accent="bg-sky-500"
+                  />
+                  <ScoreBar
+                    label="Skill level fit"
+                    value={analysis.match?.skillLevelFitScore || 0}
+                    accent="bg-cyan-500"
                   />
                   <ScoreBar
                     label="Semantic similarity"
@@ -373,6 +407,11 @@ export default function ResearchReport() {
                     label="Experience alignment"
                     value={analysis.match?.experienceScore || 0}
                     accent="bg-amber-500"
+                  />
+                  <ScoreBar
+                    label="Role co-occurrence fit"
+                    value={analysis.match?.roleCooccurrenceFitScore || 0}
+                    accent="bg-fuchsia-500"
                   />
                 </div>
               </div>
@@ -473,14 +512,14 @@ export default function ResearchReport() {
         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
           <Section
             title="Market evidence"
-            subtitle="Each graph is tied to the candidate's missing-skill and role-fit story."
+            subtitle="These charts explain why the current opportunity areas were prioritized."
             icon={BarChart3}
           >
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
-                <div className="mb-3 text-sm font-medium text-slate-200">Missing-skill demand</div>
+                <div className="mb-3 text-sm font-medium text-slate-200">Priority-ranked missing skills</div>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={marketEvidence.missingSkillDemand || []}>
+                  <BarChart data={(marketEvidence.priorityRanking || []).slice(0, 6)}>
                     <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
                     <XAxis dataKey="skill" tick={{ fill: "#94a3b8", fontSize: 11 }} angle={-25} textAnchor="end" height={80} />
                     <YAxis tick={{ fill: "#94a3b8" }} />
@@ -491,8 +530,8 @@ export default function ResearchReport() {
                         borderRadius: "12px",
                       }}
                     />
-                    <Bar dataKey="demand" radius={[6, 6, 0, 0]}>
-                      {(marketEvidence.missingSkillDemand || []).map((item, index) => (
+                    <Bar dataKey="priorityScore" radius={[6, 6, 0, 0]}>
+                      {((marketEvidence.priorityRanking || []).slice(0, 6)).map((item, index) => (
                         <Cell key={item.skill} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Bar>
@@ -568,13 +607,13 @@ export default function ResearchReport() {
           </Section>
 
           <Section
-            title="Dataset validation and methodology"
-            subtitle="Research-facing evidence for data quality and scoring logic."
+            title="Scoring and data quality"
+            subtitle="A concise view of how the analysis was produced."
             icon={ShieldCheck}
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-5">
-                <div className="text-sm font-medium text-slate-200">Dataset validation</div>
+                <div className="text-sm font-medium text-slate-200">Data validation</div>
                 <div className="mt-4 space-y-3 text-sm text-slate-400">
                   <div className="flex items-center justify-between gap-4">
                     <span>Retained row rate</span>
@@ -604,6 +643,7 @@ export default function ResearchReport() {
                 <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
                   <p>{report?.methodology?.matching}</p>
                   <p>{report?.methodology?.resumeQuality}</p>
+                  <p>{report?.methodology?.roadmap}</p>
                   <p>{report?.methodology?.datasetValidation}</p>
                 </div>
               </div>
@@ -680,42 +720,63 @@ export default function ResearchReport() {
                 <div className="mt-2 text-2xl font-semibold text-white">
                   {recommendations.timelineWeeks || "0"} weeks
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {recommendations.focusSkill && <SkillChip value={`Focus skill: ${recommendations.focusSkill}`} tone="amber" />}
+                  <SkillChip value={recommendations.catalogSource || "course_catalog"} tone="sky" />
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-5">
-                <div className="mb-3 text-sm font-medium text-slate-200">Courses</div>
-                <div className="space-y-3">
-                  {(recommendations.courses || []).slice(0, 4).map((course, index) => (
-                    <div key={`${course.title || course.skill}-${index}`} className="text-sm text-slate-300">
-                      <div className="font-medium text-white">{course.title || course.skill}</div>
-                      <div className="mt-1 text-slate-400">
-                        {course.platform || "Platform not specified"} | {course.duration || "Flexible duration"}
+              {[
+                ...(recommendations.courses || []).slice(0, 2),
+                ...(recommendations.projects || []).slice(0, 2),
+                ...(recommendations.resources || []).slice(0, 2),
+              ].map((item, index) => (
+                <div key={`${item.course_id || item.title}-${index}`} className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-white">{item.title}</div>
+                      <div className="mt-1 text-sm text-slate-400">
+                        {item.provider} | {item.level} | {item.estimated_weeks} weeks
                       </div>
                     </div>
-                  ))}
-                  {!recommendations.courses?.length && (
-                    <div className="text-sm text-slate-500">No course recommendations were generated.</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-5">
-                <div className="mb-3 text-sm font-medium text-slate-200">Practice projects</div>
-                <div className="space-y-3">
-                  {(recommendations.projects || []).slice(0, 4).map((project, index) => (
-                    <div key={`${project.title}-${index}`} className="text-sm text-slate-300">
-                      <div className="font-medium text-white">{project.title}</div>
-                      <div className="mt-1 text-slate-400">{project.description}</div>
+                    <div className="flex flex-wrap gap-2">
+                      <SkillChip value={item.targetSkill} tone="sky" />
+                      <SkillChip value={`${item.priorityLabel} priority`} tone={item.priorityLabel === "High" ? "amber" : item.priorityLabel === "Medium" ? "sky" : "rose"} />
                     </div>
-                  ))}
-                  {!recommendations.projects?.length && (
-                    <div className="text-sm text-slate-500">No practice projects were generated.</div>
-                  )}
+                  </div>
+
+                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300">
+                      <div className="font-medium text-white">Selection logic</div>
+                      <div className="mt-3 space-y-2">
+                        {(item.selectedBecause || []).map((reason) => (
+                          <div key={reason}>{reason}</div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300">
+                      <div className="font-medium text-white">Evidence scores</div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div>Priority: <span className="font-medium text-white">{item.priorityScore}%</span></div>
+                        <div>Demand: <span className="font-medium text-white">{item.marketDemandScore}%</span></div>
+                        <div>Role need: <span className="font-medium text-white">{item.targetRoleNeedScore}%</span></div>
+                        <div>Readiness: <span className="font-medium text-white">{item.readinessScore}%</span></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
+
+              {!recommendations.courses?.length && !recommendations.projects?.length && !recommendations.resources?.length && (
+                <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-5 text-sm text-slate-500">
+                  No roadmap recommendations were generated.
+                </div>
+              )}
             </div>
           </Section>
         </div>
+      </div>
       </div>
     </div>
   );

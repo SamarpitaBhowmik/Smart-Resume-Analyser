@@ -1,8 +1,60 @@
 import express from "express";
 
+import Resume from "../models/Resume.js";
 import SkillsData from "../models/SkillsData.js";
+import { buildGlobalMarketInsights, buildUserMarketInsights } from "../utils/marketInsights.js";
 
 const router = express.Router();
+
+router.get("/global-insights", async (req, res) => {
+  try {
+    const { focusSkill } = req.query;
+    const insights = await buildGlobalMarketInsights(
+      typeof focusSkill === "string" && focusSkill.trim() ? focusSkill.trim() : null
+    );
+
+    res.json({
+      success: true,
+      insights,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      error: statusCode === 500 ? "Failed to generate global market insights" : error.message,
+      details: statusCode === 500 ? error.message : undefined,
+    });
+  }
+});
+
+router.get("/user-insights", async (req, res) => {
+  try {
+    const { resumeId, focusSkill } = req.query;
+    if (!resumeId) {
+      return res.status(400).json({ error: "Resume ID is required" });
+    }
+
+    const resume = await Resume.findById(resumeId);
+    if (!resume) {
+      return res.status(404).json({ error: "Resume not found" });
+    }
+
+    const insights = await buildUserMarketInsights(
+      resume,
+      typeof focusSkill === "string" && focusSkill.trim() ? focusSkill.trim() : null
+    );
+
+    res.json({
+      success: true,
+      insights,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      error: statusCode === 500 ? "Failed to generate market insights" : error.message,
+      details: statusCode === 500 ? error.message : undefined,
+    });
+  }
+});
 
 router.get("/top-skills", async (req, res) => {
   try {

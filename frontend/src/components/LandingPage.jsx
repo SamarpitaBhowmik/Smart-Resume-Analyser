@@ -285,8 +285,21 @@ export default function LandingPage({ onNavigateToDashboard }) {
                     Get Started Free
                   </span>
                   <ArrowRight className="w-5 h-5 ml-2 text-blue-300" />
-                </div>
+                  </div>
               </button>
+
+                <button
+                  onClick={() => navigate("/resume-recommendations")}
+                  className="relative group"
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg blur opacity-70"></div>
+                  <div className="relative px-6 py-4 bg-black/80 ring-1 ring-white/10 rounded-lg leading-none flex items-center">
+                    <span className="text-blue-100 font-medium">
+                      Recommend Jobs From Resume
+                    </span>
+                    <Briefcase className="w-5 h-5 ml-2 text-blue-300" />
+                  </div>
+                </button>
 
                 <button className="relative group flex items-center">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-60"></div>

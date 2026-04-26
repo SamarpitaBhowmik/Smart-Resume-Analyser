@@ -72,7 +72,7 @@ function createPdfObjects(pages) {
 
 export function buildPdfFromReport(report) {
   const lines = [
-    "CareerAlign Research Report",
+    "CareerAlign Report",
     "",
     `Generated: ${report.metadata.generatedAt}`,
     `Algorithm version: ${report.metadata.algorithmVersion}`,
@@ -95,14 +95,20 @@ export function buildPdfFromReport(report) {
       `   Missing skills: ${job.missingSkills.join(", ") || "None"}`,
     ]),
     "",
-    "Market Evidence",
-    ...report.marketEvidence.missingSkillDemand.slice(0, 5).map(
-      (item) => `- ${item.skill}: demand ${item.demand} across ${item.roleCount} roles`
+    "Priority Opportunities",
+    ...(report.marketEvidence.priorityRanking || []).slice(0, 5).map(
+      (item) => `- ${item.skill}: priority ${item.priorityScore}, demand ${item.marketDemandScore}, role need ${item.targetRoleNeedScore}`
     ),
     "",
-    "Methodology",
+    "Recommended Next Steps",
+    ...((report.recommendations?.courses || []).slice(0, 3)).map(
+      (item, index) => `${index + 1}. ${item.title} | ${item.targetSkill} | ${item.estimated_weeks} weeks`
+    ),
+    "",
+    "Scoring Notes",
     report.methodology.matching,
     report.methodology.resumeQuality,
+    report.methodology.roadmap,
     report.methodology.datasetValidation,
   ];
 
