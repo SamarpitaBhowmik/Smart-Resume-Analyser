@@ -1,0 +1,263 @@
+{
+  "python": {
+    "category": "technical",
+    "prerequisites": ["git"],
+    "adjacent_skills": ["sql", "pandas", "numpy", "tensorflow", "pytorch"],
+    "recommended_formats": ["docs", "course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["automation utility", "data pipeline", "ml experiment benchmark"],
+    "default_effort_weeks": 3
+  },
+  "java": {
+    "category": "technical",
+    "prerequisites": ["git"],
+    "adjacent_skills": ["sql", "spring boot", "rest apis"],
+    "recommended_formats": ["docs", "course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["backend api service"],
+    "default_effort_weeks": 4
+  },
+  "sql": {
+    "category": "data",
+    "prerequisites": [],
+    "adjacent_skills": ["python", "postgresql", "mysql", "power bi", "tableau"],
+    "recommended_formats": ["course", "docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["analytics dashboard", "warehouse reporting"],
+    "default_effort_weeks": 3
+  },
+  "javascript": {
+    "category": "technical",
+    "prerequisites": ["html", "css"],
+    "adjacent_skills": ["react", "node.js", "angular", "vue", "rest apis"],
+    "recommended_formats": ["docs", "course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["frontend dashboard", "api service"],
+    "default_effort_weeks": 4
+  },
+  "react": {
+    "category": "technical",
+    "prerequisites": ["javascript", "html", "css"],
+    "adjacent_skills": ["node.js", "figma", "typescript"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["analytics dashboard", "design system implementation"],
+    "default_effort_weeks": 4
+  },
+  "node.js": {
+    "category": "technical",
+    "prerequisites": ["javascript", "git"],
+    "adjacent_skills": ["mongodb", "rest apis", "docker", "sql"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["rest api service", "deployment pipeline"],
+    "default_effort_weeks": 4
+  },
+  "docker": {
+    "category": "cloud",
+    "prerequisites": ["git", "linux"],
+    "adjacent_skills": ["kubernetes", "aws", "azure", "google cloud platform", "ci/cd"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["cloud pipeline deployment"],
+    "default_effort_weeks": 2
+  },
+  "aws": {
+    "category": "cloud",
+    "prerequisites": ["docker", "linux"],
+    "adjacent_skills": ["kubernetes", "ci/cd", "terraform", "python"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["cloud deployment", "automation pipeline"],
+    "default_effort_weeks": 4
+  },
+  "azure": {
+    "category": "cloud",
+    "prerequisites": ["docker", "linux"],
+    "adjacent_skills": ["ci/cd", ".net", "sql"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["cloud deployment", "devops workflow"],
+    "default_effort_weeks": 4
+  },
+  "google cloud platform": {
+    "category": "cloud",
+    "prerequisites": ["docker", "linux"],
+    "adjacent_skills": ["kubernetes", "python", "ci/cd"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["cloud deployment", "data pipeline"],
+    "default_effort_weeks": 4
+  },
+  "kubernetes": {
+    "category": "cloud",
+    "prerequisites": ["docker", "linux"],
+    "adjacent_skills": ["aws", "azure", "google cloud platform", "ci/cd"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "intermediate", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["cloud pipeline deployment"],
+    "default_effort_weeks": 4
+  },
+  "git": {
+    "category": "technical",
+    "prerequisites": [],
+    "adjacent_skills": ["ci/cd", "github", "docker"],
+    "recommended_formats": ["docs"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["versioned project workflow"],
+    "default_effort_weeks": 1
+  },
+  "ci/cd": {
+    "category": "cloud",
+    "prerequisites": ["git", "docker"],
+    "adjacent_skills": ["aws", "azure", "google cloud platform", "kubernetes"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "intermediate", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["pipeline deployment"],
+    "default_effort_weeks": 2
+  },
+  "tableau": {
+    "category": "data",
+    "prerequisites": ["sql"],
+    "adjacent_skills": ["power bi", "excel", "communication"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["market dashboard"],
+    "default_effort_weeks": 3
+  },
+  "power bi": {
+    "category": "data",
+    "prerequisites": ["sql", "excel"],
+    "adjacent_skills": ["tableau", "communication"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["business intelligence dashboard"],
+    "default_effort_weeks": 3
+  },
+  "mongodb": {
+    "category": "technical",
+    "prerequisites": ["node.js", "javascript"],
+    "adjacent_skills": ["rest apis", "docker"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["rest api service"],
+    "default_effort_weeks": 3
+  },
+  "postgresql": {
+    "category": "data",
+    "prerequisites": ["sql"],
+    "adjacent_skills": ["python", "tableau", "power bi"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["reporting pipeline"],
+    "default_effort_weeks": 2
+  },
+  "mysql": {
+    "category": "data",
+    "prerequisites": ["sql"],
+    "adjacent_skills": ["python", "power bi", "tableau"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["analytics dashboard"],
+    "default_effort_weeks": 2
+  },
+  "angular": {
+    "category": "technical",
+    "prerequisites": ["javascript", "html", "css"],
+    "adjacent_skills": ["typescript", "figma", "node.js"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["frontend dashboard"],
+    "default_effort_weeks": 4
+  },
+  "vue": {
+    "category": "technical",
+    "prerequisites": ["javascript", "html", "css"],
+    "adjacent_skills": ["node.js", "figma"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["frontend dashboard"],
+    "default_effort_weeks": 3
+  },
+  "html": {
+    "category": "technical",
+    "prerequisites": [],
+    "adjacent_skills": ["css", "javascript"],
+    "recommended_formats": ["docs"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "intermediate" },
+    "recommended_projects": ["landing page"],
+    "default_effort_weeks": 1
+  },
+  "css": {
+    "category": "technical",
+    "prerequisites": ["html"],
+    "adjacent_skills": ["javascript", "figma", "react"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "intermediate" },
+    "recommended_projects": ["responsive dashboard"],
+    "default_effort_weeks": 1
+  },
+  "tensorflow": {
+    "category": "data",
+    "prerequisites": ["python", "sql"],
+    "adjacent_skills": ["pytorch", "machine learning", "docker"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "intermediate", "mid": "advanced", "senior": "advanced" },
+    "recommended_projects": ["ml experiment benchmark"],
+    "default_effort_weeks": 4
+  },
+  "pytorch": {
+    "category": "data",
+    "prerequisites": ["python", "sql"],
+    "adjacent_skills": ["tensorflow", "machine learning", "docker"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "intermediate", "mid": "advanced", "senior": "advanced" },
+    "recommended_projects": ["ml experiment benchmark"],
+    "default_effort_weeks": 4
+  },
+  "figma": {
+    "category": "design",
+    "prerequisites": [],
+    "adjacent_skills": ["communication", "collaboration", "css"],
+    "recommended_formats": ["docs", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["design system handoff"],
+    "default_effort_weeks": 2
+  },
+  "communication": {
+    "category": "professional",
+    "prerequisites": [],
+    "adjacent_skills": ["collaboration", "teamwork", "leadership", "project management"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["presentation pack", "design handoff"],
+    "default_effort_weeks": 2
+  },
+  "leadership": {
+    "category": "professional",
+    "prerequisites": ["communication"],
+    "adjacent_skills": ["project management", "team leadership", "collaboration"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["team delivery plan"],
+    "default_effort_weeks": 3
+  },
+  "project management": {
+    "category": "professional",
+    "prerequisites": ["communication"],
+    "adjacent_skills": ["leadership", "collaboration"],
+    "recommended_formats": ["course", "project"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["execution plan and milestone tracker"],
+    "default_effort_weeks": 3
+  },
+  "rest apis": {
+    "category": "technical",
+    "prerequisites": ["node.js", "javascript", "sql"],
+    "adjacent_skills": ["mongodb", "docker", "git"],
+    "recommended_formats": ["project", "docs"],
+    "target_level_by_yoe": { "entry": "beginner", "mid": "intermediate", "senior": "advanced" },
+    "recommended_projects": ["rest api service"],
+    "default_effort_weeks": 3
+  }
+}

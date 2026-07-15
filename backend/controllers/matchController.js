@@ -6,12 +6,55 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
-const flashModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Embeddings: configurable with fallback for v1beta model availability issues.
+const PRIMARY_EMBEDDING_MODEL =
+  process.env.GEMINI_EMBEDDING_MODEL || "text-embedding-004";
+const FALLBACK_EMBEDDING_MODEL =
+  process.env.GEMINI_EMBEDDING_FALLBACK || "embedding-001";
+
+let embedModel = genAI.getGenerativeModel({ model: PRIMARY_EMBEDDING_MODEL });
+// Use model from env, or try gemini-2.5-flash (same as ResumeRoutes), with fallback to gemini-pro
+// If you get 404 errors, set GEMINI_MODEL=gemini-pro in your .env file
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const flashModel = genAI.getGenerativeModel({ model: MODEL_NAME });
+
+// Helper function to generate content with fallback
+async function generateContentWithFallback(prompt) {
+  try {
+    return await flashModel.generateContent(prompt);
+  } catch (error) {
+    // If model not found (404), try fallback to gemini-pro
+    const is404 = error.status === 404 || (error.message && error.message.includes('404'));
+    if (is404 && MODEL_NAME !== "gemini-pro") {
+      console.warn(`Model ${MODEL_NAME} not found, trying gemini-pro as fallback`);
+      try {
+        const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+        return await fallbackModel.generateContent(prompt);
+      } catch (fallbackError) {
+        console.error("Fallback model also failed:", fallbackError.message);
+        throw new Error(`Both ${MODEL_NAME} and gemini-pro models failed. Please check your API key and available models.`);
+      }
+    }
+    throw error;
+  }
+}
 
 async function getEmbedding(text) {
-  const result = await embedModel.embedContent(text);
-  return result.embedding.values;
+  try {
+    const result = await embedModel.embedContent(text);
+    return result.embedding?.values || result.embedding || result;
+  } catch (error) {
+    const is404 = error?.status === 404 || (error?.message && error.message.includes("404"));
+    if (is404 && PRIMARY_EMBEDDING_MODEL !== FALLBACK_EMBEDDING_MODEL) {
+      console.warn(
+        `Embedding model ${PRIMARY_EMBEDDING_MODEL} not found; trying fallback ${FALLBACK_EMBEDDING_MODEL}`
+      );
+      embedModel = genAI.getGenerativeModel({ model: FALLBACK_EMBEDDING_MODEL });
+      const retry = await embedModel.embedContent(text);
+      return retry.embedding?.values || retry.embedding || retry;
+    }
+    throw error;
+  }
 }
 
 function cosineSimilarity(vecA, vecB) {
@@ -76,7 +119,7 @@ export const matchResumeToJob = async (req, res) => {
       Resume has skills: ${resume.extracted.skills}.
       Return only the missing skills as a JSON array. Example: ["Python", "Django"].
     `;
-    const missingRes = await flashModel.generateContent(missingPrompt);
+    const missingRes = await generateContentWithFallback(missingPrompt);
     const missingText = extractTextFromGemini(missingRes.response);
     const missingSkills = safeParseJSON(missingText, []);
 
@@ -92,7 +135,7 @@ export const matchResumeToJob = async (req, res) => {
           "timelineWeeks": "12"
         }
       `;
-      const upskillRes = await flashModel.generateContent(upskillPrompt);
+      const upskillRes = await generateContentWithFallback(upskillPrompt);
       const upskillText = extractTextFromGemini(upskillRes.response);
       upskillPlan = safeParseJSON(upskillText, []);
     }

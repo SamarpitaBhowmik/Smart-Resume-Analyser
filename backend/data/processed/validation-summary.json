@@ -1,0 +1,810 @@
+{
+  "datasetVersion": "research-dataset-2025-12-14",
+  "generatedAt": "2026-06-27T16:14:09.686Z",
+  "sourceFiles": {
+    "jobs": "data/jobs.csv",
+    "courses": "data/Online_Courses.csv"
+  },
+  "raw": {
+    "rowCount": 1068,
+    "jobRowCount": 1068,
+    "courseRowCount": 8092
+  },
+  "cleaned": {
+    "jobPostingCount": 984,
+    "skillFactCount": 12247,
+    "uniqueTitles": 218,
+    "uniqueSkills": 1782,
+    "courseCatalogCount": 5309,
+    "rawCourseCount": 5275,
+    "mergedCourseCatalogCount": 5309,
+    "uniqueCourseProviders": 4,
+    "uniqueCourseSkills": 14728,
+    "sharedJobAndCourseSkills": 335
+  },
+  "quality": {
+    "retainedRowRate": 0.9213,
+    "droppedRowCount": 84,
+    "duplicateRowsRemoved": 83,
+    "invalidYoeRows": 0,
+    "missingFieldRows": 1,
+    "averageSkillsPerJob": 12.45,
+    "jobsWithLowSkillCount": 0,
+    "suspiciousEncodingRows": 0,
+    "topNormalizedTitles": [
+      {
+        "title": ".net Developer",
+        "count": 20
+      },
+      {
+        "title": "Ai Prompt Engineer",
+        "count": 20
+      },
+      {
+        "title": "Ar/vr Developer",
+        "count": 20
+      },
+      {
+        "title": "Blockchain Developer",
+        "count": 20
+      },
+      {
+        "title": "Content Writer",
+        "count": 20
+      },
+      {
+        "title": "Copywriter",
+        "count": 20
+      },
+      {
+        "title": "Data Engineer",
+        "count": 20
+      },
+      {
+        "title": "Digital Marketing Specialist",
+        "count": 20
+      },
+      {
+        "title": "Ethical Hacker",
+        "count": 20
+      },
+      {
+        "title": "Fintech Engineer",
+        "count": 20
+      }
+    ],
+    "topNormalizedSkills": [
+      {
+        "skill": "python",
+        "count": 355
+      },
+      {
+        "skill": "java",
+        "count": 196
+      },
+      {
+        "skill": "git",
+        "count": 160
+      },
+      {
+        "skill": "communication",
+        "count": 152
+      },
+      {
+        "skill": "sql",
+        "count": 150
+      },
+      {
+        "skill": "leadership",
+        "count": 148
+      },
+      {
+        "skill": "docker",
+        "count": 143
+      },
+      {
+        "skill": "problem-solving",
+        "count": 140
+      },
+      {
+        "skill": "aws",
+        "count": 135
+      },
+      {
+        "skill": "javascript",
+        "count": 126
+      }
+    ],
+    "yoeDistribution": [
+      {
+        "yoeLabel": "0-1",
+        "count": 320
+      },
+      {
+        "yoeLabel": "5+",
+        "count": 70
+      },
+      {
+        "yoeLabel": "0",
+        "count": 48
+      },
+      {
+        "yoeLabel": "6+",
+        "count": 35
+      },
+      {
+        "yoeLabel": "3-5",
+        "count": 35
+      },
+      {
+        "yoeLabel": "3+",
+        "count": 29
+      },
+      {
+        "yoeLabel": "4+",
+        "count": 25
+      },
+      {
+        "yoeLabel": "5-8",
+        "count": 25
+      },
+      {
+        "yoeLabel": "0-2",
+        "count": 25
+      },
+      {
+        "yoeLabel": "2-5",
+        "count": 23
+      }
+    ],
+    "droppedReasons": [
+      {
+        "reason": "duplicate_row",
+        "count": 83
+      },
+      {
+        "reason": "missing_required_field",
+        "count": 1
+      }
+    ],
+    "suspiciousSignals": [],
+    "sampleDroppedRows": [
+      {
+        "rowNumber": 25,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 26,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 27,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 28,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 29,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 30,
+        "reason": "duplicate_row",
+        "title": "AI Engineer - Fresher",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 38,
+        "reason": "missing_required_field",
+        "title": null,
+        "yoe": "5–10 years"
+      },
+      {
+        "rowNumber": 107,
+        "reason": "duplicate_row",
+        "title": "Backend Developer - Entry Level",
+        "yoe": "0–1 year"
+      },
+      {
+        "rowNumber": 141,
+        "reason": "duplicate_row",
+        "title": "Big Data Specialist",
+        "yoe": "4+"
+      },
+      {
+        "rowNumber": 174,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "0-1"
+      },
+      {
+        "rowNumber": 175,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "02-May"
+      },
+      {
+        "rowNumber": 177,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "06-Oct"
+      },
+      {
+        "rowNumber": 178,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "0-1"
+      },
+      {
+        "rowNumber": 179,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "02-May"
+      },
+      {
+        "rowNumber": 180,
+        "reason": "duplicate_row",
+        "title": "Business Analyst",
+        "yoe": "05-Aug"
+      }
+    ],
+    "sampleSuspiciousRows": []
+  },
+  "consistency": {
+    "sharedSkillCount": 335,
+    "sharedSkillCoverageRate": 0.188,
+    "sharedSkillExamples": [
+      "html",
+      "css",
+      "javascript",
+      "git",
+      "unit testing",
+      "rest apis",
+      "docker",
+      "azure",
+      "design patterns",
+      "microservices",
+      "kubernetes",
+      "nosql",
+      "angular",
+      "grpc",
+      "ci/cd",
+      "python",
+      "java",
+      "c++",
+      "regression",
+      "classification",
+      "clustering",
+      "tensorflow",
+      "pytorch",
+      "keras",
+      "scikit-learn"
+    ],
+    "courseCatalogSupportsTopJobSkills": [
+      {
+        "skill": "python",
+        "count": 355
+      },
+      {
+        "skill": "java",
+        "count": 196
+      },
+      {
+        "skill": "git",
+        "count": 160
+      },
+      {
+        "skill": "communication",
+        "count": 152
+      },
+      {
+        "skill": "sql",
+        "count": 150
+      },
+      {
+        "skill": "leadership",
+        "count": 148
+      },
+      {
+        "skill": "docker",
+        "count": 143
+      },
+      {
+        "skill": "aws",
+        "count": 135
+      },
+      {
+        "skill": "javascript",
+        "count": 126
+      },
+      {
+        "skill": "azure",
+        "count": 120
+      }
+    ]
+  },
+  "datasets": {
+    "jobs": {
+      "sourceFile": "data/jobs.csv",
+      "raw": {
+        "rowCount": 1068
+      },
+      "cleaned": {
+        "jobPostingCount": 984,
+        "skillFactCount": 12247,
+        "uniqueTitles": 218,
+        "uniqueSkills": 1782
+      },
+      "quality": {
+        "retainedRowRate": 0.9213,
+        "droppedRowCount": 84,
+        "duplicateRowsRemoved": 83,
+        "invalidYoeRows": 0,
+        "missingFieldRows": 1,
+        "averageSkillsPerJob": 12.45,
+        "jobsWithLowSkillCount": 0,
+        "suspiciousEncodingRows": 0,
+        "topNormalizedTitles": [
+          {
+            "title": ".net Developer",
+            "count": 20
+          },
+          {
+            "title": "Ai Prompt Engineer",
+            "count": 20
+          },
+          {
+            "title": "Ar/vr Developer",
+            "count": 20
+          },
+          {
+            "title": "Blockchain Developer",
+            "count": 20
+          },
+          {
+            "title": "Content Writer",
+            "count": 20
+          },
+          {
+            "title": "Copywriter",
+            "count": 20
+          },
+          {
+            "title": "Data Engineer",
+            "count": 20
+          },
+          {
+            "title": "Digital Marketing Specialist",
+            "count": 20
+          },
+          {
+            "title": "Ethical Hacker",
+            "count": 20
+          },
+          {
+            "title": "Fintech Engineer",
+            "count": 20
+          }
+        ],
+        "topNormalizedSkills": [
+          {
+            "skill": "python",
+            "count": 355
+          },
+          {
+            "skill": "java",
+            "count": 196
+          },
+          {
+            "skill": "git",
+            "count": 160
+          },
+          {
+            "skill": "communication",
+            "count": 152
+          },
+          {
+            "skill": "sql",
+            "count": 150
+          },
+          {
+            "skill": "leadership",
+            "count": 148
+          },
+          {
+            "skill": "docker",
+            "count": 143
+          },
+          {
+            "skill": "problem-solving",
+            "count": 140
+          },
+          {
+            "skill": "aws",
+            "count": 135
+          },
+          {
+            "skill": "javascript",
+            "count": 126
+          }
+        ],
+        "yoeDistribution": [
+          {
+            "yoeLabel": "0-1",
+            "count": 320
+          },
+          {
+            "yoeLabel": "5+",
+            "count": 70
+          },
+          {
+            "yoeLabel": "0",
+            "count": 48
+          },
+          {
+            "yoeLabel": "6+",
+            "count": 35
+          },
+          {
+            "yoeLabel": "3-5",
+            "count": 35
+          },
+          {
+            "yoeLabel": "3+",
+            "count": 29
+          },
+          {
+            "yoeLabel": "4+",
+            "count": 25
+          },
+          {
+            "yoeLabel": "5-8",
+            "count": 25
+          },
+          {
+            "yoeLabel": "0-2",
+            "count": 25
+          },
+          {
+            "yoeLabel": "2-5",
+            "count": 23
+          }
+        ],
+        "droppedReasons": [
+          {
+            "reason": "duplicate_row",
+            "count": 83
+          },
+          {
+            "reason": "missing_required_field",
+            "count": 1
+          }
+        ],
+        "suspiciousSignals": [],
+        "sampleDroppedRows": [
+          {
+            "rowNumber": 25,
+            "reason": "duplicate_row",
+            "title": "AI Engineer - Fresher",
+            "yoe": "0–1 year"
+          },
+          {
+            "rowNumber": 26,
+            "reason": "duplicate_row",
+            "title": "AI Engineer - Fresher",
+            "yoe": "0–1 year"
+          },
+          {
+            "rowNumber": 27,
+            "reason": "duplicate_row",
+            "title": "AI Engineer - Fresher",
+            "yoe": "0–1 year"
+          },
+          {
+            "rowNumber": 28,
+            "reason": "duplicate_row",
+            "title": "AI Engineer - Fresher",
+            "yoe": "0–1 year"
+          },
+          {
+            "rowNumber": 29,
+            "reason": "duplicate_row",
+            "title": "AI Engineer - Fresher",
+            "yoe": "0–1 year"
+          },
+          {
+            "rowNumber": 30,
+            "reason": "duplicate_row",
+            "title": "AI Engineer - Fresher",
+            "yoe": "0–1 year"
+          },
+          {
+            "rowNumber": 38,
+            "reason": "missing_required_field",
+            "title": null,
+            "yoe": "5–10 years"
+          },
+          {
+            "rowNumber": 107,
+            "reason": "duplicate_row",
+            "title": "Backend Developer - Entry Level",
+            "yoe": "0–1 year"
+          },
+          {
+            "rowNumber": 141,
+            "reason": "duplicate_row",
+            "title": "Big Data Specialist",
+            "yoe": "4+"
+          },
+          {
+            "rowNumber": 174,
+            "reason": "duplicate_row",
+            "title": "Business Analyst",
+            "yoe": "0-1"
+          },
+          {
+            "rowNumber": 175,
+            "reason": "duplicate_row",
+            "title": "Business Analyst",
+            "yoe": "02-May"
+          },
+          {
+            "rowNumber": 177,
+            "reason": "duplicate_row",
+            "title": "Business Analyst",
+            "yoe": "06-Oct"
+          },
+          {
+            "rowNumber": 178,
+            "reason": "duplicate_row",
+            "title": "Business Analyst",
+            "yoe": "0-1"
+          },
+          {
+            "rowNumber": 179,
+            "reason": "duplicate_row",
+            "title": "Business Analyst",
+            "yoe": "02-May"
+          },
+          {
+            "rowNumber": 180,
+            "reason": "duplicate_row",
+            "title": "Business Analyst",
+            "yoe": "05-Aug"
+          }
+        ],
+        "sampleSuspiciousRows": []
+      }
+    },
+    "courses": {
+      "sourceFile": "data/Online_Courses.csv",
+      "raw": {
+        "rowCount": 8092
+      },
+      "cleaned": {
+        "rawCourseCount": 5275,
+        "mergedCatalogCount": 5309,
+        "uniqueProviders": 4,
+        "uniqueSkills": 14728
+      },
+      "quality": {
+        "retainedRowRate": 0.6519,
+        "droppedRowCount": 2817,
+        "duplicateRowsRemoved": 2817,
+        "missingTitleRows": 0,
+        "missingUrlRows": 0,
+        "missingSkillsRows": 0,
+        "invalidUrlRows": 0,
+        "inferredSkillRows": 3181,
+        "missingProviderRows": 0,
+        "suspiciousRatingRows": 0,
+        "suspiciousDurationRows": 0,
+        "averageSkillsPerCourse": 4.97,
+        "coursesWithSingleSkill": 2,
+        "suspiciousRows": 1,
+        "topProviders": [
+          {
+            "provider": "Coursera",
+            "count": 2819
+          },
+          {
+            "provider": "Future Learn",
+            "count": 2031
+          },
+          {
+            "provider": "Udacity",
+            "count": 277
+          },
+          {
+            "provider": "Simplilearn",
+            "count": 148
+          }
+        ],
+        "topFormats": [
+          {
+            "format": "course",
+            "count": 4625
+          },
+          {
+            "format": "project",
+            "count": 519
+          },
+          {
+            "format": "video",
+            "count": 125
+          },
+          {
+            "format": "docs",
+            "count": 6
+          }
+        ],
+        "levelDistribution": [
+          {
+            "level": "intermediate",
+            "count": 4382
+          },
+          {
+            "level": "beginner",
+            "count": 768
+          },
+          {
+            "level": "advanced",
+            "count": 125
+          }
+        ],
+        "topNormalizedSkills": [
+          {
+            "skill": "business",
+            "count": 273
+          },
+          {
+            "skill": "data analysis",
+            "count": 200
+          },
+          {
+            "skill": "data science",
+            "count": 158
+          },
+          {
+            "skill": "python programming",
+            "count": 140
+          },
+          {
+            "skill": "machine learning",
+            "count": 136
+          },
+          {
+            "skill": "computer science",
+            "count": 129
+          },
+          {
+            "skill": "cloud computing",
+            "count": 119
+          },
+          {
+            "skill": "health",
+            "count": 116
+          },
+          {
+            "skill": "leadership and management",
+            "count": 100
+          },
+          {
+            "skill": "communication",
+            "count": 100
+          }
+        ],
+        "droppedReasons": [
+          {
+            "reason": "duplicate_row",
+            "count": 2817
+          }
+        ],
+        "suspiciousSignals": [
+          {
+            "reason": "text_encoding",
+            "count": 1
+          }
+        ],
+        "sampleDroppedRows": [
+          {
+            "rowNumber": 3008,
+            "reason": "duplicate_row",
+            "title": "How to Become a Data Engineer"
+          },
+          {
+            "rowNumber": 3009,
+            "reason": "duplicate_row",
+            "title": "Learn C++"
+          },
+          {
+            "rowNumber": 3010,
+            "reason": "duplicate_row",
+            "title": "Learn to Code"
+          },
+          {
+            "rowNumber": 3011,
+            "reason": "duplicate_row",
+            "title": "How to Become a Data Analyst"
+          },
+          {
+            "rowNumber": 3012,
+            "reason": "duplicate_row",
+            "title": "How to Become a Business Analyst"
+          },
+          {
+            "rowNumber": 3145,
+            "reason": "duplicate_row",
+            "title": "Business Ethics: Exploring Big Data and Tax Avoidance"
+          },
+          {
+            "rowNumber": 3173,
+            "reason": "duplicate_row",
+            "title": "Microsoft Future Ready: Ethics and Law in Data and Analytics"
+          },
+          {
+            "rowNumber": 3174,
+            "reason": "duplicate_row",
+            "title": "Microsoft Future Ready: Ethics and Laws in Data and Analytics"
+          },
+          {
+            "rowNumber": 3188,
+            "reason": "duplicate_row",
+            "title": "Governance Standards Part A: Introduction and Governance Standards 1-3"
+          },
+          {
+            "rowNumber": 3201,
+            "reason": "duplicate_row",
+            "title": "Cultivating Diversity through Research and Insights"
+          },
+          {
+            "rowNumber": 3232,
+            "reason": "duplicate_row",
+            "title": "Emergency Planning and Preparedness: An Introduction"
+          },
+          {
+            "rowNumber": 3238,
+            "reason": "duplicate_row",
+            "title": "Career Coaching for Women: Supercharge Your Career with AllBright"
+          },
+          {
+            "rowNumber": 3243,
+            "reason": "duplicate_row",
+            "title": "Business Management and Leadership"
+          },
+          {
+            "rowNumber": 3247,
+            "reason": "duplicate_row",
+            "title": "Personal Trainer's Toolkit: Build a Health and Fitness Business Network"
+          },
+          {
+            "rowNumber": 3253,
+            "reason": "duplicate_row",
+            "title": "Behavioural Economics: Employee and Customer Behaviour"
+          }
+        ],
+        "sampleSuspiciousRows": [
+          {
+            "rowNumber": 6076,
+            "title": "La Cécité dans le Monde: Planifier et Gérer les Services de Soins Oculaires",
+            "signals": [
+              "text_encoding"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
