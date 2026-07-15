@@ -21,6 +21,7 @@ import { analyzeResumeQualityFromExtracted } from "../utils/resumeQuality.js";
 import { parseYoeRange } from "../utils/yoe.js";
 import { extractJobRequirements } from "../utils/jobRequirementExtractor.js";
 import { buildEvidenceBackedRoadmap } from "../utils/roadmapBuilder.js";
+import { applyDiversitySuppression } from "../utils/diversityRanking.js";
 
 dotenv.config();
 
@@ -286,6 +287,8 @@ function buildRoadmapInputs(resume, latestAnalysis, focusSkill = null) {
     targetYoeMax: latestAnalysis.extractedJobRequirements?.yoeMax ?? null,
     targetTitleCandidates: latestAnalysis.extractedJobRequirements?.titleCandidates || [],
     focusSkill,
+    jobDescription: latestAnalysis.jobDescription || "",
+    skillsContext: latestAnalysis.extractedJobRequirements?.skillsContext || null,
   };
 }
 
@@ -489,15 +492,17 @@ export async function getJobSuggestionsForResume(resume, limit = 10) {
     shortlist.map(({ job }) => scoreJobMatch(resume, job, resumeEmbeddingText, resumeEmbedding))
   );
 
-  return rankedJobs
+  const sortedRankedJobs = rankedJobs
     .sort((a, b) => {
       if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore;
       if ((b.recommendationConfidence?.score || 0) !== (a.recommendationConfidence?.score || 0)) {
         return (b.recommendationConfidence?.score || 0) - (a.recommendationConfidence?.score || 0);
       }
       return (b.titleAlignmentScore || 0) - (a.titleAlignmentScore || 0);
-    })
-    .slice(0, limit);
+    });
+
+  const diverseJobs = applyDiversitySuppression(sortedRankedJobs, null);
+  return diverseJobs.slice(0, limit);
 }
 
 export const analyzeResumeQuality = async (req, res) => {
@@ -599,6 +604,8 @@ export const analyzeResumeAndJob = async (req, res) => {
       targetYoeMin: extractedYoe.min,
       targetYoeMax: extractedYoe.max,
       targetTitleCandidates: extractedRequirements.titleCandidates,
+      jobDescription,
+      skillsContext: extractedRequirements.skillsContext,
     });
 
     const latestAnalysis = {
@@ -610,6 +617,7 @@ export const analyzeResumeAndJob = async (req, res) => {
         yoeMax: extractedYoe.max,
         canonicalSkills: extractedRequirements.canonicalSkills,
         displaySkills: extractedRequirements.skills,
+        skillsContext: extractedRequirements.skillsContext,
         titleCandidates: extractedRequirements.titleCandidates,
         extractionMethod: extractedRequirements.extractionMethod,
         extractionConfidence: extractedRequirements.extractionConfidence,

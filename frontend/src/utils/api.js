@@ -104,3 +104,13 @@ export function getResearchReportPdfUrl(resumeId) {
   return `${API_BASE_URL}/report/${resumeId}/pdf`;
 }
 
+export async function uploadRecruiterResume(file) {
+  const formData = new FormData();
+  formData.append("resume", file);
+
+  return apiCall("/recruiter/upload", {
+    method: "POST",
+    body: formData,
+  });
+}
+

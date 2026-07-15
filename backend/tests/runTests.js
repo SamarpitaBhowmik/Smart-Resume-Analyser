@@ -4,6 +4,7 @@ import { transformRows } from "../utils/datasetPipeline.js";
 import { extractJobRequirements } from "../utils/jobRequirementExtractor.js";
 import {
   buildHybridScore,
+  buildJobExplanation,
   buildRecommendationConfidence,
   buildSkillComparison,
   computeDemandAlignment,
@@ -279,6 +280,54 @@ await runAsyncTest("job requirement extraction prefers deterministic extraction 
   assert.ok(result.skills.length >= 3);
   assert.equal(result.usedGeminiFallback, false);
   assert.ok(result.extractionMethod.startsWith("deterministic"));
+  // Verify contextual extraction
+  assert.ok(result.skillsContext["sql"] !== undefined, "SQL context should be extracted");
+});
+
+runTest("engineering role prioritizes missing technical skills over generic professional skills", () => {
+  const result = buildSkillPriorityRanking({
+    missingCanonicalSkills: ["communication", "aws", "postgresql"],
+    targetCanonicalSkills: ["python", "aws", "postgresql", "communication"],
+    resumeCanonicalSkills: ["python"],
+    resumeYears: 3,
+    targetYoeMin: 3,
+    targetYoeMax: 5,
+    targetTitleCandidates: ["software engineer"],
+    jobDescription: "Requirements: must have AWS and PostgreSQL. General: good communication.",
+  });
+
+  const rankings = result.ranking.map(r => r.skill);
+  const awsIndex = rankings.indexOf("aws");
+  const pgIndex = rankings.indexOf("postgresql");
+  const commIndex = rankings.indexOf("communication");
+
+  assert.ok(awsIndex < commIndex, "AWS (technical) should outrank communication (professional)");
+  assert.ok(pgIndex < commIndex, "PostgreSQL (technical) should outrank communication (professional)");
+});
+
+runTest("qualitative explanations in buildJobExplanation do not contain raw percentages", () => {
+  const explanation = buildJobExplanation({
+    title: "Software Engineer",
+    skillComparison: {
+      matchedSkills: ["Python", "JavaScript"],
+      missingSkills: ["AWS"],
+      exactSkillCoverageScore: 80,
+    },
+    skillLevelFit: {
+      score: 75,
+      evidence: [],
+    },
+    semanticSimilarityScore: 65,
+    experienceAlignment: { score: 90, explanation: "Matches experience" },
+    roleCooccurrenceFit: { score: 85, explanation: "Good fit" },
+    titleAlignment: { score: 100, explanation: "Matches title" },
+    demandAlignment: { score: 90, explanation: "High demand" },
+  });
+
+  const percentRegex = /\b\d+%/;
+  explanation.forEach(line => {
+    assert.ok(!percentRegex.test(line), `Explanation line should not contain raw percentages: "${line}"`);
+  });
 });
 
 if (failed) {

@@ -358,11 +358,32 @@ export function buildJobExplanation({
   demandAlignment,
   recommendationConfidence,
 }) {
+  const exactCoverageDesc =
+    skillComparison.exactSkillCoverageScore >= 80
+      ? "The resume shows exceptionally strong skill coverage against the job's requirements, matching almost all key competencies."
+      : skillComparison.exactSkillCoverageScore >= 55
+      ? "The resume shows moderate skill coverage, matching a good portion of key requirements but with notable gaps."
+      : "The resume has low skill coverage against the requirements, matching only a few of the necessary competencies.";
+
+  const skillMaturityDesc =
+    skillLevelFit.score >= 80
+      ? "The candidate's experience maturity aligns well with the expected seniority level for these skills."
+      : skillLevelFit.score >= 55
+      ? "The candidate has adequate skill maturity, though some areas may require additional growth to meet target expectations."
+      : "The candidate's current experience level is below the expected maturity for several key skills.";
+
+  const semanticAlignmentDesc =
+    semanticSimilarityScore >= 80
+      ? "Excellent context-level alignment between the resume content and the overall job description."
+      : semanticSimilarityScore >= 55
+      ? "Moderate contextual alignment, indicating transferability but some differences in role focus."
+      : "Limited contextual alignment, showing a different primary focus or varying terminology.";
+
   const reasons = [
     `${title} has ${skillComparison.matchedSkills.length} matched skills and ${skillComparison.missingSkills.length} missing skills.`,
-    `Exact skill coverage contributes ${skillComparison.exactSkillCoverageScore}% to the hybrid-v2 recommendation evidence.`,
-    `Skill maturity fit scored ${skillLevelFit.score}% after comparing expected skill level to estimated resume experience.`,
-    `Semantic similarity baseline scored ${semanticSimilarityScore}%.`,
+    exactCoverageDesc,
+    skillMaturityDesc,
+    semanticAlignmentDesc,
     experienceAlignment.explanation,
     roleCooccurrenceFit.explanation,
     titleAlignment?.explanation,

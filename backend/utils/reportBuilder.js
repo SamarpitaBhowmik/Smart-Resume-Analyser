@@ -151,6 +151,8 @@ export async function buildResearchReport(resumeId) {
     resumeQualityScore: resumeQuality.overallScore,
     bestFitRole: jobSuggestions[0]?.title || null,
     highestImpactMissingSkill,
+    matchedSkills: latestAnalysis.match?.matchedSkills || [],
+    missingSkills: latestAnalysis.match?.missingSkills || [],
   };
 
   return {
@@ -169,6 +171,8 @@ export async function buildResearchReport(resumeId) {
       experienceCount: Array.isArray(resume.extracted?.experience) ? resume.extracted.experience.length : 0,
       educationCount: Array.isArray(resume.extracted?.education) ? resume.extracted.education.length : 0,
     },
+    matchedSkills: latestAnalysis.match?.matchedSkills || [],
+    missingSkills: latestAnalysis.match?.missingSkills || [],
     analysis: latestAnalysis,
     resumeQuality,
     recommendations: roadmap,

@@ -87,6 +87,132 @@ function computeExtractionConfidence(skills, titleCandidates) {
   return Math.min(95, skills.length * 16 + titleCandidates.length * 8);
 }
 
+function lineContainsSkill(normLine, normSkill) {
+  if (normLine.includes(` ${normSkill} `)) return true;
+  for (const [alias, canonical] of Object.entries(skillAliasMap)) {
+    if (normalizeSkill(canonical) === normSkill) {
+      const normAlias = normalizeTextForMatching(alias).trim();
+      if (normLine.includes(` ${normAlias} `)) return true;
+    }
+  }
+  return false;
+}
+
+export function analyzeJDContexts(jobDescription = "", canonicalSkills = []) {
+  const lines = String(jobDescription || "").split(/\r?\n/);
+  const skillContexts = {};
+
+  // Initialize all canonical skills with default general context
+  canonicalSkills.forEach((skill) => {
+    skillContexts[skill] = {
+      context: "general",
+      weight: 1.0,
+      explicitlyEmphasized: false,
+      section: "general",
+    };
+  });
+
+  const reqHeaders = /^\s*(requirements|qualifications|what you need|minimum qualifications|basic qualifications|skills required|critical skills|core competencies|required skills|education|experience|credentials)/i;
+  const prefHeaders = /^\s*(preferred qualifications|preferred skills|nice to have|pluses|bonus|highly desired|preferred|preferred experience|desirable)/i;
+  const respHeaders = /^\s*(responsibilities|what you will do|key responsibilities|duties|role|essential duties|job description|tasks|day-to-day)/i;
+  const otherHeaders = /^\s*(about us|company profile|benefits|perks|compensation|equal opportunity)/i;
+
+  const reqKeywords = /\b(required|must|essential|critical|mandatory|minimum|necessity|necessities|qualification|qualifications|need|needs|expected to have|proficient in|expertise in|experience with|years of|critical|core|key skill)\b/i;
+  const prefKeywords = /\b(preferred|nice-to-have|nice to have|plus|pluses|bonus|desirable|optional|good to have|ideal|advantage|helpful|preference|desired)\b/i;
+  const respKeywords = /\b(responsibilities|responsible|will do|will be|duties|task|tasks|manage|lead|build|develop|maintain|collaborate|work with|deliver|implement)\b/i;
+
+  let currentSection = "general";
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    // Detect section header
+    if (
+      trimmed.length < 60 &&
+      (trimmed.endsWith(":") ||
+        reqHeaders.test(trimmed) ||
+        prefHeaders.test(trimmed) ||
+        respHeaders.test(trimmed) ||
+        otherHeaders.test(trimmed))
+    ) {
+      if (reqHeaders.test(trimmed)) {
+        currentSection = "required";
+      } else if (prefHeaders.test(trimmed)) {
+        currentSection = "preferred";
+      } else if (respHeaders.test(trimmed)) {
+        currentSection = "responsibilities";
+      } else if (otherHeaders.test(trimmed)) {
+        currentSection = "other";
+      }
+    }
+
+    // Split line into clauses
+    const sentences = trimmed.split(/(?<=[.?!])\s+/);
+    sentences.forEach((sentence) => {
+      const normSentence = normalizeTextForMatching(sentence);
+
+      canonicalSkills.forEach((skill) => {
+        if (lineContainsSkill(normSentence, skill)) {
+          let score = 1.0;
+          let context = "general";
+
+          if (currentSection === "required") {
+            score = 3.0;
+            context = "required";
+          } else if (currentSection === "responsibilities") {
+            score = 2.5;
+            context = "responsibilities";
+          } else if (currentSection === "preferred") {
+            score = 1.5;
+            context = "preferred";
+          } else if (currentSection === "other") {
+            score = 0.5;
+            context = "other";
+          } else {
+            // Sentence content matching
+            if (reqKeywords.test(normSentence)) {
+              score = 3.0;
+              context = "required";
+            } else if (respKeywords.test(normSentence)) {
+              score = 2.5;
+              context = "responsibilities";
+            } else if (prefKeywords.test(normSentence)) {
+              score = 1.5;
+              context = "preferred";
+            } else {
+              score = 2.0;
+              context = "general";
+            }
+          }
+
+          // Check for explicit emphasis
+          let explicitlyEmphasized = false;
+          if (
+            /\b(strongly|strongly preferred|highly desired|deep understanding|expert|expertise|years of experience|extensive|proven track record|essential|primary|core)\b/i.test(
+              normSentence
+            )
+          ) {
+            explicitlyEmphasized = true;
+            score += 0.5;
+          }
+
+          if (score > (skillContexts[skill]?.weight || 0)) {
+            skillContexts[skill] = {
+              context,
+              weight: score,
+              explicitlyEmphasized,
+              section: currentSection,
+            };
+          }
+        }
+      });
+    });
+  });
+
+  return skillContexts;
+}
+
 export async function extractJobRequirements(jobDescription, fallbackExtractor = null) {
   const deterministicSkills = extractDeterministicSkills(jobDescription);
   const titleCandidates = extractTitleCandidates(jobDescription);
@@ -109,9 +235,12 @@ export async function extractJobRequirements(jobDescription, fallbackExtractor =
     }
   }
 
+  const skillsContext = analyzeJDContexts(jobDescription, canonicalSkills);
+
   return {
     skills: canonicalSkills.map((skill) => formatSkillLabel(skill)),
     canonicalSkills,
+    skillsContext,
     titleCandidates: titleCandidates.map((item) => item.normalizedTitle),
     extractionConfidence,
     extractionMethod,

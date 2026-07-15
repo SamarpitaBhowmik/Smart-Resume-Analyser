@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -14,15 +14,21 @@ import {
   Target,
   Trash2,
   Upload,
+  BrainCircuit,
+  Fingerprint,
+  Activity,
+  Network
 } from "lucide-react";
 import {
   analyzeResumeAndJob,
   getJobSuggestions,
   getRoadmap,
   getResearchReport,
-  getResearchReportPdfUrl,
   uploadResume,
 } from "../utils/api.js";
+import AnalyticsDashboard from "./AnalyticsDashboard";
+import ResumeRecommendations from "./ResumeRecommendations";
+import ResearchReport from "./ResearchReport";
 
 const REPORT_CACHE_PREFIX = "careeralign-report:";
 
@@ -44,8 +50,6 @@ function buildLocalReportSnapshot({ resumeId, analysisResult, jobsResponse, road
     metadata: {
       generatedAt: new Date().toISOString(),
       resumeId,
-      algorithmVersion: analysisResult?.methodology?.algorithmVersion || "hybrid-v2",
-      roadmapVersion: roadmap.methodology?.version || "roadmap-v2",
     },
     summary: {
       jobFitScore: analysisResult?.match?.percentage || 0,
@@ -59,11 +63,7 @@ function buildLocalReportSnapshot({ resumeId, analysisResult, jobsResponse, road
     jobs,
     marketEvidence: {
       priorityRanking,
-      missingSkillTrend: roadmap.selectedSkillInsights?.demandByYoe || [],
-      relatedSkills: roadmap.selectedSkillInsights?.skillAdjacency || [],
-      topRoleMatches: roadmap.selectedSkillInsights?.roleFitBreakdown || [],
     },
-    validationSummary: {},
     resultsSummary: {
       narrative: `${jobs[0]?.title || "Your strongest role match"} currently appears to be the best fit.`,
       interpretation: priorityRanking[0]?.skill
@@ -73,125 +73,58 @@ function buildLocalReportSnapshot({ resumeId, analysisResult, jobsResponse, road
   };
 }
 
-function scoreTone(score = 0) {
-  if (score >= 80) return "text-emerald-300";
-  if (score >= 60) return "text-sky-300";
-  if (score >= 40) return "text-amber-300";
-  return "text-rose-300";
-}
-
-function Chip({ value, tone = "slate" }) {
-  const tones = {
-    slate: "border-white/15 bg-white/8 text-slate-200",
-    sky: "border-sky-400/25 bg-sky-500/12 text-sky-100",
-    emerald: "border-emerald-400/25 bg-emerald-500/12 text-emerald-100",
-    amber: "border-amber-400/25 bg-amber-500/12 text-amber-100",
-    rose: "border-rose-400/25 bg-rose-500/12 text-rose-100",
-  };
-  return <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${tones[tone]}`}>{value}</span>;
-}
-
-function SectionCard({ title, subtitle, children, action, className = "" }) {
-  return (
-    <section className={`app-panel rounded-[28px] p-6 ${className}`}>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-lg font-semibold text-white">{title}</div>
-          {subtitle ? <p className="mt-2 max-w-3xl text-sm leading-6 app-text-muted">{subtitle}</p> : null}
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function ProgressRow({ label, value, color = "bg-sky-500" }) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="text-slate-300">{label}</span>
-        <span className="font-medium text-white">{value}%</span>
-      </div>
-      <div className="h-2.5 rounded-full bg-white/10">
-        <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, note, score, icon }) {
-  return (
-    <div className="app-panel-soft rounded-[24px] p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="rounded-2xl border border-white/10 bg-white/8 p-2.5">
-          {React.createElement(icon, { className: "h-5 w-5 text-sky-300" })}
-        </div>
-        <div className={`text-2xl font-semibold ${typeof score === "number" ? scoreTone(score) : "text-white"}`}>{value}</div>
-      </div>
-      <div className="text-sm font-semibold text-white">{label}</div>
-      <div className="mt-2 text-sm leading-6 text-slate-300">{note}</div>
-    </div>
-  );
-}
-
-function ActionTile({ icon, title, text }) {
-  return (
-    <div className="app-panel-soft rounded-[24px] p-5">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
-        {React.createElement(icon, { className: "h-5 w-5 text-sky-300" })}
-      </div>
-      <div className="text-sm font-semibold text-white">{title}</div>
-      <p className="mt-2 text-sm leading-6 text-slate-300">{text}</p>
-    </div>
-  );
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const fileRef = useRef(null);
+  const moduleContainerRef = useRef(null);
   const [resumeFile, setResumeFile] = useState(null);
   const [jobDesc, setJobDesc] = useState("");
   const [resumeId, setResumeId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Analyzing your profile...");
+  const [loadingPhase, setLoadingPhase] = useState(0);
   const [error, setError] = useState(null);
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [jobSuggestions, setJobSuggestions] = useState(null);
-  const [roadmapData, setRoadmapData] = useState(null);
-  const [roadmapLoading, setRoadmapLoading] = useState(false);
-  const [selectedPrioritySkill, setSelectedPrioritySkill] = useState(null);
-  const [reportData, setReportData] = useState(null);
+  
+  // New state to hold dashboard results instead of redirecting
+  const [dashboardData, setDashboardData] = useState(null);
+  const [expandedSection, setExpandedSection] = useState(null); // 'analytics' | 'pathways' | 'report' | null
 
-  const quality = reportData?.resumeQuality || analysisResult?.resumeQuality || null;
-  const jobs = jobSuggestions?.jobs || reportData?.jobs || [];
-  const roadmap = roadmapData?.roadmap || analysisResult?.upskillingPlan || null;
-  const priorityRanking = useMemo(
-    () => roadmap?.priorityRanking || analysisResult?.skillPriorityRanking || [],
-    [roadmap?.priorityRanking, analysisResult?.skillPriorityRanking]
-  );
-  const weakestStatements = useMemo(() => {
-    const statements = quality?.statements || [];
-    return statements.filter((item) => item.flags?.length).sort((a, b) => a.overallScore - b.overallScore).slice(0, 3);
-  }, [quality]);
-  const summary = reportData?.summary || {};
-  const activeSkill = selectedPrioritySkill || roadmap?.focusSkill || priorityRanking[0]?.skill;
-  const topRoadmapItems = [...(roadmap?.courses || []).slice(0, 2), ...(roadmap?.projects || []).slice(0, 2)].slice(0, 4);
+  // States
+  const loadingPhases = [
+    { text: "Initializing Workspace...", progress: 10 },
+    { text: "Extracting Semantic Graph...", progress: 30 },
+    { text: "Querying Market Benchmarks...", progress: 50 },
+    { text: "Calculating Confidence Matrix...", progress: 70 },
+    { text: "Finalizing Intelligence Report...", progress: 90 }
+  ];
+
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setLoadingPhase((prev) => (prev < loadingPhases.length - 1 ? prev + 1 : prev));
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  useEffect(() => {
+    if (expandedSection && moduleContainerRef.current) {
+      setTimeout(() => {
+        moduleContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [expandedSection]);
 
   const resetAnalysis = () => {
     setResumeId(null);
-    setAnalysisResult(null);
-    setJobSuggestions(null);
-    setRoadmapData(null);
-    setReportData(null);
-    setSelectedPrioritySkill(null);
+    setLoadingPhase(0);
+    setDashboardData(null);
+    setExpandedSection(null);
   };
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.type !== "application/pdf") {
-      setError("Please upload a PDF resume.");
+      setError("System requires a standard PDF for parsing.");
       return;
     }
     setResumeFile(file);
@@ -206,327 +139,428 @@ export default function Dashboard() {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const loadRoadmapForSkill = async (currentResumeId, skill = null) => {
-    const response = await getRoadmap(currentResumeId, skill);
-    setRoadmapData(response);
-    setSelectedPrioritySkill(response.roadmap?.focusSkill || response.roadmap?.priorityRanking?.[0]?.skill || null);
-    return response;
-  };
-
   const handleAnalyze = async () => {
     if (!resumeFile || !jobDesc.trim()) {
-      setError("Please upload a resume and paste a job description.");
+      setError("Awaiting complete input payload: PDF & Job Profile required.");
       return;
     }
     setLoading(true);
+    setLoadingPhase(0);
     setError(null);
-    setAnalysisResult(null);
-    setJobSuggestions(null);
-    setRoadmapData(null);
-    setReportData(null);
+    
     try {
-      setLoadingMessage("Uploading your resume...");
       const uploadResponse = await uploadResume(resumeFile);
       setResumeId(uploadResponse.id);
-      setLoadingMessage("Matching against the role...");
       const analysisResponse = await analyzeResumeAndJob(uploadResponse.id, jobDesc);
-      setAnalysisResult(analysisResponse);
-      setLoadingMessage("Finding the strongest role matches...");
       const jobsResponse = await getJobSuggestions(uploadResponse.id, 10);
-      setJobSuggestions(jobsResponse);
-      setLoadingMessage("Building your action plan...");
-      const roadmapResponse = await loadRoadmapForSkill(uploadResponse.id);
+      const roadmapResponse = await getRoadmap(uploadResponse.id, null);
+      
+      let finalReport;
       try {
-        setLoadingMessage("Preparing your report...");
-        const reportResponse = await getResearchReport(uploadResponse.id);
-        setReportData(reportResponse);
-        cacheReport(uploadResponse.id, reportResponse);
+        finalReport = await getResearchReport(uploadResponse.id);
       } catch (reportError) {
-        console.error("Report fetch failed, using local snapshot:", reportError);
-        const localReport = buildLocalReportSnapshot({
+        finalReport = buildLocalReportSnapshot({
           resumeId: uploadResponse.id,
           analysisResult: analysisResponse,
           jobsResponse,
           roadmapResponse,
         });
-        setReportData(localReport);
-        cacheReport(uploadResponse.id, localReport);
       }
+      cacheReport(uploadResponse.id, finalReport);
+      
+      // Instead of redirecting to /report, we stay in dashboard and show the workspace
+      setDashboardData(finalReport);
     } catch (analysisError) {
       console.error(analysisError);
-      setError(analysisError.message || "We couldn't complete the analysis.");
+      setError(analysisError.message || "Intelligence synthesis failed. Please retry.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFocusSkill = async (skill) => {
-    if (!resumeId || !skill) return;
-    try {
-      setRoadmapLoading(true);
-      await loadRoadmapForSkill(resumeId, skill);
-    } catch (roadmapError) {
-      console.error(roadmapError);
-      setError(roadmapError.message || "We couldn't update the plan.");
-    } finally {
-      setRoadmapLoading(false);
-    }
-  };
-
-  const openAnalytics = () => {
-    const params = new URLSearchParams();
-    if (resumeId) params.set("resumeId", resumeId);
-    if (activeSkill) params.set("skill", activeSkill);
-    navigate(`/analytics${params.toString() ? `?${params.toString()}` : ""}`);
-  };
-
-  const openReport = () => {
-    if (!resumeId) return;
-    navigate(`/report/${resumeId}`, { state: { report: reportData } });
-  };
-
-  const downloadReport = () => {
-    if (!resumeId) return;
-    window.open(getResearchReportPdfUrl(resumeId), "_blank", "noopener,noreferrer");
-  };
-
   return (
-    <div className="app-shell">
-      <div className="app-content">
-        <div className="app-topbar">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
-            <div className="flex items-center gap-4">
-              <button onClick={() => navigate("/")} className="app-btn-secondary rounded-2xl p-2 transition hover:border-sky-400/40 hover:text-white">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <div>
-                <div className="app-eyebrow">CareerAlign Workspace</div>
-                <h1 className="mt-1 text-2xl font-semibold text-white">Resume intelligence dashboard</h1>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => navigate("/resume-recommendations")} className="app-btn-secondary rounded-2xl px-4 py-2 text-sm font-medium transition hover:border-sky-400/40 hover:text-white">Resume recommendations</button>
-              <button onClick={openAnalytics} className="app-btn-secondary rounded-2xl px-4 py-2 text-sm font-medium transition hover:border-sky-400/40 hover:text-white">Market analytics</button>
-              <button onClick={openReport} disabled={!resumeId} className="app-btn-secondary rounded-2xl px-4 py-2 text-sm font-medium transition hover:border-sky-400/40 hover:text-white disabled:opacity-50">View report</button>
-              <button onClick={downloadReport} disabled={!resumeId} className="app-btn-primary rounded-2xl px-4 py-2 text-sm font-medium transition hover:brightness-110 disabled:opacity-50">PDF</button>
+    <div className="min-h-screen bg-dark-950 text-white font-sans selection:bg-brand-DEFAULT selection:text-dark-950 flex flex-col">
+      {/* Topbar */}
+      <header className="border-b border-white/5 bg-dark-900/50 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button onClick={() => navigate("/")} className="text-slate-400 hover:text-white transition-colors">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="h-6 w-[1px] bg-white/10"></div>
+            <div className="flex items-center space-x-2">
+              <BrainCircuit className="w-5 h-5 text-brand-light" />
+              <span className="font-medium tracking-wide">Analysis Workspace</span>
             </div>
           </div>
+          <div className="flex items-center space-x-4 text-xs font-mono text-slate-500">
+            {dashboardData && (
+              <button 
+                onClick={resetAnalysis}
+                className="bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-colors text-white mr-4"
+              >
+                NEW ANALYSIS
+              </button>
+            )}
+            <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> System Optimal</span>
+            <span>V2.0</span>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col p-8 relative">
+        {/* Background glow */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-brand-dark/5 rounded-full blur-[120px]"></div>
         </div>
 
-        <main className="mx-auto max-w-7xl space-y-6 px-6 py-8">
-          <section className="app-hero rounded-[32px] p-7 md:p-8">
-            <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
-              <div>
-                <div className="app-eyebrow">Start Here</div>
-                <h2 className="mt-3 max-w-3xl text-3xl font-semibold text-white md:text-4xl">
-                  Upload a resume and evaluate fit for a target role.
-                </h2>
-                <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
-                  Add a job description to generate a fit score, skill-gap analysis, priority ranking, and a learning plan you can act on.
-                </p>
-                <div className="mt-6 grid gap-4 md:grid-cols-3">
-                  <ActionTile icon={Target} title="Fit breakdown" text="See how skill coverage, experience alignment, and semantic similarity affect the score." />
-                  <ActionTile icon={Sparkles} title="Priority ranking" text="Missing skills are ranked using role relevance, market demand, and readiness." />
-                  <ActionTile icon={BookOpen} title="Learning plan" text="Get a phased roadmap backed by curated learning resources." />
-                </div>
-              </div>
-
-              <div className="app-panel rounded-[28px] p-6">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-semibold text-white">Run an analysis</div>
-                    <div className="mt-1 text-sm text-slate-300">One resume. One role. One clean workspace.</div>
-                  </div>
-                  {resumeFile ? <Chip value="Resume attached" tone="emerald" /> : <Chip value="PDF required" tone="sky" />}
+        <div className="max-w-[1200px] w-full mx-auto z-10 flex-1 flex flex-col justify-center">
+          
+          {!dashboardData ? (
+            // Pre-Analysis State
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto">
+              {/* Left Side: Context / Readiness */}
+              <div className="lg:col-span-5 space-y-8 flex flex-col justify-center">
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
+                    Initialize <br/><span className="text-slate-400">Intelligence Session</span>
+                  </h1>
+                  <p className="text-lg text-slate-400 font-light leading-relaxed max-w-md">
+                    Deploy our AI engine to cross-reference your structural capabilities against live market demand benchmarks.
+                  </p>
                 </div>
 
+                {/* Simulated Readiness Indicators */}
                 <div className="space-y-4">
-                  <label className="block cursor-pointer rounded-[24px] border-2 border-dashed border-white/15 bg-white/5 p-5 transition hover:border-sky-400/35 hover:bg-white/8">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/15">
-                        <Upload className="h-5 w-5 text-sky-300" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white">{resumeFile ? resumeFile.name : "Upload your PDF resume"}</div>
-                        <div className="mt-1 text-sm text-slate-300">{resumeFile ? "Resume ready for analysis. Replace it anytime." : "Choose the candidate resume you want to benchmark."}</div>
-                      </div>
-                      {resumeFile ? (
-                        <button type="button" onClick={(event) => { event.preventDefault(); handleRemoveFile(); }} className="rounded-xl p-2 text-rose-300 transition hover:bg-rose-500/10">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      ) : null}
+                  <h3 className="text-xs font-mono uppercase tracking-widest text-slate-500 mb-2">System Readiness</h3>
+                  
+                  <div className="flex items-center justify-between p-4 bg-dark-900 border border-white/5 rounded-xl">
+                    <div className="flex items-center space-x-3">
+                      <Fingerprint className="w-5 h-5 text-brand-light" />
+                      <span className="text-sm text-slate-300">Profile Artifact</span>
                     </div>
-                    <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
-                  </label>
-
-                  <div>
-                    <div className="mb-2 text-sm font-semibold text-white">Target job description</div>
-                    <textarea
-                      rows="8"
-                      value={jobDesc}
-                      onChange={(event) => { setJobDesc(event.target.value); setError(null); }}
-                      className="w-full rounded-[24px] border border-white/15 bg-white/5 p-4 text-sm leading-6 text-white outline-none transition placeholder:text-slate-500 focus:border-sky-400/40 focus:bg-white/8"
-                      placeholder="Paste the role requirements here so the system can evaluate fit, gaps, and strongest next steps."
-                    />
+                    {resumeFile ? (
+                      <span className="text-xs font-mono text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">LOADED</span>
+                    ) : (
+                      <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2 py-1 rounded">AWAITING INPUT</span>
+                    )}
                   </div>
 
-                  {error ? (
-                    <div className="flex items-start gap-3 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-                      <AlertCircle className="mt-0.5 h-4 w-4 flex-none" />
-                      <span>{error}</span>
+                  <div className="flex items-center justify-between p-4 bg-dark-900 border border-white/5 rounded-xl">
+                    <div className="flex items-center space-x-3">
+                      <Target className="w-5 h-5 text-brand-light" />
+                      <span className="text-sm text-slate-300">Target Vector</span>
                     </div>
-                  ) : null}
+                    {jobDesc.length > 50 ? (
+                      <span className="text-xs font-mono text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">CALIBRATED</span>
+                    ) : (
+                      <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2 py-1 rounded">AWAITING PARAMETERS</span>
+                    )}
+                  </div>
 
-                  <button onClick={handleAnalyze} disabled={!resumeFile || !jobDesc.trim() || loading} className="app-btn-primary flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition hover:brightness-110 disabled:opacity-50">
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SearchCheck className="h-4 w-4" />}
-                    {loading ? loadingMessage : "Analyze candidate"}
-                  </button>
+                  <div className="flex items-center justify-between p-4 bg-dark-900 border border-white/5 rounded-xl opacity-60">
+                    <div className="flex items-center space-x-3">
+                      <Activity className="w-5 h-5 text-slate-500" />
+                      <span className="text-sm text-slate-400">Market Benchmarks</span>
+                    </div>
+                    <span className="text-xs font-mono text-brand-light bg-brand-light/10 px-2 py-1 rounded">ONLINE</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
 
-          {!analysisResult ? (
-            <SectionCard
-              title="What you’ll get after analysis"
-              subtitle="CareerAlign combines fit scoring, market evidence, and recommendations into one consistent workflow."
-            >
-              <div className="grid gap-4 md:grid-cols-3">
-                <ActionTile icon={FileText} title="Match summary" text="A clear fit score with matched vs missing skills." />
-                <ActionTile icon={BarChart3} title="Market context" text="See why a gap matters across roles and experience bands." />
-                <ActionTile icon={Briefcase} title="Next steps" text="Top benchmark roles plus a practical upskilling roadmap." />
-              </div>
-            </SectionCard>
-          ) : (
-            <>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <StatCard icon={Target} label="Match score" value={`${summary.jobFitScore || analysisResult.match?.percentage || 0}%`} note="Overall fit for the selected role." score={summary.jobFitScore || analysisResult.match?.percentage || 0} />
-                <StatCard icon={Sparkles} label="Resume quality" value={`${summary.resumeQualityScore || quality?.overallScore || 0}%`} note="How clearly the resume communicates impact." score={summary.resumeQualityScore || quality?.overallScore || 0} />
-                <StatCard
-                  icon={Briefcase}
-                  label="Best-fit role"
-                  value={summary.bestFitRole || jobs[0]?.title || "Not available"}
-                  note="Top recommendation from the benchmark role set."
-                />
-                <StatCard icon={BookOpen} label="Top opportunity" value={summary.highestImpactMissingSkill || priorityRanking[0]?.skill || "No gap"} note="The skill most worth prioritizing next." />
-              </div>
-
-              <SectionCard title="Profile match and priority evidence" subtitle="Matching signals and ranked skill gaps now sit side by side in a roomy section instead of inside a cramped split layout." action={<button onClick={openAnalytics} className="app-btn-secondary inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium transition hover:border-sky-400/40 hover:text-white">Open analytics <ArrowRight className="h-4 w-4" /></button>}>
-                <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-                  <div className="app-panel-soft rounded-[24px] p-5">
-                    <div className="mb-4 text-sm font-semibold text-white">Profile match</div>
-                    <div className="space-y-4">
-                      <ProgressRow label="Exact skill coverage" value={analysisResult.match?.exactSkillCoverageScore || analysisResult.match?.skillCoverageScore || 0} color="bg-sky-500" />
-                      <ProgressRow label="Skill level fit" value={analysisResult.match?.skillLevelFitScore || 0} color="bg-cyan-500" />
-                      <ProgressRow label="Semantic similarity" value={analysisResult.match?.semanticScore || 0} color="bg-emerald-500" />
-                      <ProgressRow label="Experience alignment" value={analysisResult.match?.experienceScore || 0} color="bg-amber-500" />
-                      <ProgressRow label="Role benchmark fit" value={analysisResult.match?.roleCooccurrenceFitScore || 0} color="bg-fuchsia-500" />
-                    </div>
-                    <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                      <div>
-                        <div className="mb-3 text-sm font-semibold text-white">Matched skills</div>
-                        <div className="flex flex-wrap gap-2">{(analysisResult.match?.matchedSkills || []).slice(0, 12).map((skill) => <Chip key={skill} value={skill} tone="emerald" />)}</div>
+              {/* Right Side: Upload Form */}
+              <div className="lg:col-span-7">
+                <div className="bg-dark-900/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden h-full flex flex-col justify-center">
+                  
+                  {loading && (
+                    <div className="absolute inset-0 bg-dark-950/90 backdrop-blur-md z-20 flex flex-col items-center justify-center p-12 text-center">
+                      <div className="w-20 h-20 mb-8 relative">
+                        <div className="absolute inset-0 rounded-full border-t-2 border-brand-light animate-spin"></div>
+                        <div className="absolute inset-2 rounded-full border-b-2 border-accent animate-spin-slow"></div>
+                        <BrainCircuit className="w-8 h-8 text-brand-light absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                       </div>
-                      <div>
-                        <div className="mb-3 text-sm font-semibold text-white">Missing skills</div>
-                        <div className="flex flex-wrap gap-2">{(analysisResult.match?.missingSkills || []).slice(0, 12).map((skill) => <Chip key={skill} value={skill} tone="rose" />)}</div>
+                      
+                      <h3 className="text-xl font-medium mb-2">{loadingPhases[loadingPhase].text}</h3>
+                      <p className="text-sm text-slate-400 mb-8 font-mono">Process ID: 0x{Math.random().toString(16).substr(2, 8).toUpperCase()}</p>
+                      
+                      <div className="w-full max-w-sm bg-dark-800 rounded-full h-1 overflow-hidden">
+                        <div 
+                          className="bg-brand-light h-full transition-all duration-1000 ease-out"
+                          style={{ width: `${loadingPhases[loadingPhase].progress}%` }}
+                        ></div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-4">
-                    {priorityRanking.slice(0, 4).map((item) => {
-                      const isActive = activeSkill === item.skill;
-                      return (
-                        <button key={item.skill} onClick={() => handleFocusSkill(item.skill)} className={`block w-full rounded-[24px] border p-5 text-left transition ${isActive ? "border-sky-400/35 bg-sky-500/12" : "border-white/12 bg-white/5 hover:border-sky-400/25 hover:bg-white/8"}`}>
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-white">{item.skill}</div>
-                              <div className="mt-2 text-sm leading-6 text-slate-300">{item.selectedBecause?.[0] || "High-value skill gap."}</div>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">1. Candidate Profile (PDF)</label>
+                      <label className="group relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-brand-light/50 hover:bg-brand-light/5 transition-all">
+                        {resumeFile ? (
+                          <div className="flex flex-col items-center justify-center space-y-2">
+                            <FileText className="w-8 h-8 text-emerald-400" />
+                            <span className="text-sm font-medium text-emerald-100">{resumeFile.name}</span>
+                            <button 
+                              onClick={(e) => { e.preventDefault(); handleRemoveFile(); }}
+                              className="absolute top-4 right-4 p-1.5 rounded-full bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center space-y-3">
+                            <div className="p-3 bg-white/5 rounded-full group-hover:scale-110 transition-transform">
+                              <Upload className="w-6 h-6 text-brand-light" />
                             </div>
-                            <Chip value={`${item.priorityScore}%`} tone={isActive ? "sky" : "amber"} />
+                            <span className="text-sm text-slate-400">Drag & drop or click to upload PDF</span>
                           </div>
-                          <div className="mt-4 grid gap-2 text-sm text-slate-200 sm:grid-cols-3">
-                            <div>Demand <span className="font-semibold">{item.marketDemandScore}%</span></div>
-                            <div>Role need <span className="font-semibold">{item.targetRoleNeedScore}%</span></div>
-                            <div>Readiness <span className="font-semibold">{item.readinessScore}%</span></div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                        )}
+                        <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">2. Target Role Vector (Job Description)</label>
+                      <textarea
+                        rows="6"
+                        value={jobDesc}
+                        onChange={(e) => { setJobDesc(e.target.value); setError(null); }}
+                        className="w-full bg-dark-950 border border-white/10 rounded-2xl p-5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-light/50 focus:ring-1 focus:ring-brand-light/50 transition-all resize-none font-mono"
+                        placeholder="Paste job description text here..."
+                      />
+                    </div>
+
+                    {error && (
+                      <div className="flex items-center space-x-2 text-rose-400 bg-rose-400/10 px-4 py-3 rounded-xl border border-rose-400/20">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-medium">{error}</span>
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={handleAnalyze} 
+                      disabled={!resumeFile || !jobDesc.trim()}
+                      className="w-full group relative overflow-hidden rounded-2xl bg-white text-dark-950 py-4 font-semibold tracking-wide transition-all hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
+                    >
+                      <span className="relative z-10 flex items-center justify-center">
+                        Execute Analysis
+                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                      </span>
+                    </button>
+
                   </div>
                 </div>
-              </SectionCard>
+              </div>
 
-              <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-                <SectionCard title="Action plan" subtitle="The roadmap gets the full reading width it needs." action={roadmapLoading ? <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-medium text-slate-100"><Loader2 className="h-3.5 w-3.5 animate-spin" />Updating</div> : roadmap?.focusSkill ? <Chip value={`Focused on ${roadmap.focusSkill}`} tone="amber" /> : null}>
-                  <div className="grid gap-4 lg:grid-cols-3">
-                    {(roadmap?.phases || []).map((phase) => (
-                      <div key={phase.name} className="app-panel-soft rounded-[24px] p-4">
-                        <div className="font-semibold text-white">{phase.name}</div>
-                        <div className="mt-1 text-sm text-slate-300">{phase.items?.length || 0} items</div>
-                        <div className="mt-4 space-y-3">{(phase.items || []).slice(0, 2).map((item) => <div key={item.course_id} className="rounded-2xl border border-white/10 bg-white/5 p-3"><div className="text-sm font-semibold text-white">{item.title}</div><div className="mt-1 text-xs text-slate-300">{item.targetSkill} · {item.estimated_weeks} weeks</div></div>)}</div>
+            </div>
+          ) : (
+            // Post-Analysis Workspace State
+            <div className="animate-fade-in space-y-8 py-8">
+              
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
+                    Intelligence <span className="text-brand-light">Synthesized</span>
+                  </h1>
+                  <p className="text-slate-400">
+                    Analysis complete. Choose a module to explore the extracted insights.
+                  </p>
+                </div>
+                
+                <div className="flex items-center space-x-4 bg-dark-900 border border-white/10 p-4 rounded-xl">
+                  <div className="text-center px-4 border-r border-white/5">
+                    <div className="text-2xl font-bold text-white">{dashboardData.summary?.jobFitScore || 0}%</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Target Fit</div>
+                  </div>
+                  <div className="text-center px-4">
+                    <div className="text-2xl font-bold text-white">{dashboardData.summary?.resumeQualityScore || 0}%</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Profile Impact</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actionable Portals */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <button 
+                  onClick={() => setExpandedSection(expandedSection === 'analytics' ? null : 'analytics')}
+                  className={`bg-dark-900 border p-6 rounded-2xl text-left transition-all duration-300 group flex flex-col h-full ${
+                    expandedSection === 'analytics' 
+                      ? 'border-brand-light/60 bg-dark-900/90 shadow-[0_0_30px_rgba(56,189,248,0.15)] ring-1 ring-brand-light/30' 
+                      : 'border-white/10 hover:border-brand-light/50'
+                  }`}
+                >
+                  <div className={`mb-4 p-3 rounded-lg w-fit transition-colors ${
+                    expandedSection === 'analytics' ? 'bg-brand-light/20' : 'bg-brand-light/10 group-hover:bg-brand-light/20'
+                  }`}>
+                    <BarChart3 className="w-6 h-6 text-brand-light" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-brand-light transition-colors">Market Analytics</h3>
+                  <p className="text-sm text-slate-400 mb-6 flex-1">
+                    Explore demand curves, salary bands, and market readiness benchmarks for your missing skills.
+                  </p>
+                  <div className={`flex items-center text-sm font-medium text-white transition-all ${
+                    expandedSection === 'analytics' ? 'text-brand-light' : 'group-hover:translate-x-1'
+                  }`}>
+                    {expandedSection === 'analytics' ? 'Collapse Module' : 'Explore Market Data'}
+                    <ArrowRight className={`w-4 h-4 ml-2 transition-transform duration-300 ${
+                      expandedSection === 'analytics' ? 'rotate-90 text-brand-light' : ''
+                    }`} />
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => setExpandedSection(expandedSection === 'pathways' ? null : 'pathways')}
+                  className={`bg-dark-900 border p-6 rounded-2xl text-left transition-all duration-300 group flex flex-col h-full ${
+                    expandedSection === 'pathways' 
+                      ? 'border-emerald-500/60 bg-dark-900/90 shadow-[0_0_30px_rgba(52,211,153,0.15)] ring-1 ring-emerald-500/30' 
+                      : 'border-white/10 hover:border-emerald-500/50'
+                  }`}
+                >
+                  <div className={`mb-4 p-3 rounded-lg w-fit transition-colors ${
+                    expandedSection === 'pathways' ? 'bg-emerald-500/20' : 'bg-emerald-500/10 group-hover:bg-emerald-500/20'
+                  }`}>
+                    <Network className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-emerald-400 transition-colors">Pathway Engine</h3>
+                  <p className="text-sm text-slate-400 mb-6 flex-1">
+                    Discover adjacent roles and alternative career pathways matching your current baseline capabilities.
+                  </p>
+                  <div className={`flex items-center text-sm font-medium text-white transition-all ${
+                    expandedSection === 'pathways' ? 'text-emerald-400' : 'group-hover:translate-x-1'
+                  }`}>
+                    {expandedSection === 'pathways' ? 'Collapse Module' : 'View Pathways'}
+                    <ArrowRight className={`w-4 h-4 ml-2 transition-transform duration-300 ${
+                      expandedSection === 'pathways' ? 'rotate-90 text-emerald-400' : ''
+                    }`} />
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => setExpandedSection(expandedSection === 'report' ? null : 'report')}
+                  className={`bg-dark-900 border p-6 rounded-2xl text-left transition-all duration-300 group flex flex-col h-full ${
+                    expandedSection === 'report' 
+                      ? 'border-violet-400/60 bg-dark-900/90 shadow-[0_0_30px_rgba(167,139,250,0.15)] ring-1 ring-violet-400/30' 
+                      : 'border-white/10 hover:border-violet-400/50'
+                  }`}
+                >
+                  <div className={`mb-4 p-3 rounded-lg w-fit transition-colors ${
+                    expandedSection === 'report' ? 'bg-violet-400/20' : 'bg-violet-400/10 group-hover:bg-violet-400/20'
+                  }`}>
+                    <FileText className="w-6 h-6 text-violet-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors">Full Intelligence Report</h3>
+                  <p className="text-sm text-slate-400 mb-6 flex-1">
+                    Read the detailed breakdown, semantic constellation, and export the comprehensive PDF dossier.
+                  </p>
+                  <div className={`flex items-center text-sm font-medium text-white transition-all ${
+                    expandedSection === 'report' ? 'text-violet-400' : 'group-hover:translate-x-1'
+                  }`}>
+                    {expandedSection === 'report' ? 'Collapse Module' : 'Open Report'}
+                    <ArrowRight className={`w-4 h-4 ml-2 transition-transform duration-300 ${
+                      expandedSection === 'report' ? 'rotate-90 text-violet-400' : ''
+                    }`} />
+                  </div>
+                </button>
+
+              </div>
+
+              {/* Collapsible Expanded Module Container */}
+              {expandedSection && (
+                <div 
+                  ref={moduleContainerRef}
+                  className="mt-8 border-t border-white/5 pt-12 animate-fade-in space-y-6"
+                >
+                  <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                    <h2 className="text-2xl font-semibold flex items-center gap-3">
+                      {expandedSection === 'analytics' && <><BarChart3 className="w-6 h-6 text-brand-light" /> Market Analytics</>}
+                      {expandedSection === 'pathways' && <><Network className="w-6 h-6 text-emerald-400" /> Pathway Engine</>}
+                      {expandedSection === 'report' && <><FileText className="w-6 h-6 text-violet-400" /> Full Intelligence Report</>}
+                    </h2>
+                    <button 
+                      onClick={() => setExpandedSection(null)}
+                      className="text-xs font-mono bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 transition-colors text-slate-400 hover:text-white"
+                    >
+                      CLOSE MODULE
+                    </button>
+                  </div>
+                  
+                  <div className="w-full">
+                    {expandedSection === 'analytics' && (
+                      <AnalyticsDashboard 
+                        resumeId={resumeId} 
+                        embedded={true} 
+                        onToggleSection={(sec) => setExpandedSection(sec)} 
+                      />
+                    )}
+                    {expandedSection === 'pathways' && (
+                      <ResumeRecommendations 
+                        resumeId={resumeId} 
+                        embedded={true} 
+                        onToggleSection={(sec) => setExpandedSection(sec)} 
+                      />
+                    )}
+                    {expandedSection === 'report' && (
+                      <ResearchReport 
+                        resumeId={resumeId} 
+                        embedded={true} 
+                        onToggleSection={(sec) => setExpandedSection(sec)} 
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Reasoning Summary */}
+              <div className="mt-8 bg-dark-950 border border-white/5 p-6 rounded-2xl">
+                <div className="flex items-center space-x-2 mb-4">
+                  <BrainCircuit className="w-5 h-5 text-brand-light" />
+                  <h3 className="font-semibold text-white">AI Engine Summary</h3>
+                </div>
+                <div className="p-4 bg-brand-dark/10 border border-brand-light/20 rounded-lg text-sm text-brand-light/90 font-mono leading-relaxed">
+                  {dashboardData.resultsSummary?.narrative} {dashboardData.resultsSummary?.interpretation}
+                </div>
+              </div>
+
+              {/* Strategic Roadmap */}
+              {dashboardData.recommendations && (
+                <div className="mt-8 bg-dark-950 border border-white/5 p-6 rounded-2xl">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-2">
+                      <Target className="w-5 h-5 text-amber-400" />
+                      <h3 className="font-semibold text-white">Strategic Upskilling Roadmap</h3>
+                    </div>
+                    <span className="text-xs font-mono bg-amber-400/10 text-amber-400 px-3 py-1 rounded-full border border-amber-400/20">
+                      Focus: {dashboardData.recommendations.focusSkill || 'Core Competencies'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[...(dashboardData.recommendations.courses || []), ...(dashboardData.recommendations.projects || [])].slice(0, 3).map((item, i) => (
+                      <div key={i} className="p-4 bg-dark-900 border border-white/5 rounded-xl hover:border-amber-400/30 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">{item.priorityLabel || 'High'} Priority</span>
+                          <span className="text-[10px] text-slate-500 font-mono uppercase bg-dark-950 px-2 py-0.5 rounded">{item.estimated_weeks || item.estimatedWeeks || '4'}w</span>
+                        </div>
+                        <h4 className="text-sm font-medium text-white mb-2 leading-tight">{item.title}</h4>
+                        <p className="text-xs text-slate-400 mb-1">Target: <span className="text-slate-300">{item.targetSkill || item.skill}</span></p>
                       </div>
                     ))}
                   </div>
-                </SectionCard>
+                  {(!dashboardData.recommendations.courses?.length && !dashboardData.recommendations.projects?.length) && (
+                    <div className="text-sm text-slate-400 py-4 text-center">
+                      No critical capability gaps detected for target trajectory.
+                    </div>
+                  )}
+                </div>
+              )}
 
-                <SectionCard title="Recommended next steps" subtitle="Compact, readable suggestions you can act on immediately.">
-                  <div className="space-y-4">
-                    {topRoadmapItems.length ? topRoadmapItems.map((item) => (
-                      <div key={item.course_id} className="app-panel-soft rounded-[24px] p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <div className="font-semibold text-white">{item.title}</div>
-                            <div className="mt-1 text-sm text-slate-300">{item.targetSkill} · {item.estimated_weeks} weeks · {item.level}</div>
-                          </div>
-                          <Chip value={`${item.priorityLabel} priority`} tone={item.priorityLabel === "High" ? "amber" : item.priorityLabel === "Medium" ? "sky" : "slate"} />
-                        </div>
-                        <div className="mt-3 text-sm leading-6 text-slate-300">{item.selectedBecause?.[0] || "Selected because it supports the current highest-value opportunity."}</div>
-                      </div>
-                    )) : <div className="app-panel-soft rounded-[24px] p-4 text-sm text-slate-300">No learning steps are available yet.</div>}
-                  </div>
-                </SectionCard>
-              </div>
-
-              <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-                <SectionCard title="Best-fit roles" subtitle="These are the strongest benchmark matches for the current profile.">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    {jobs.slice(0, 3).length ? jobs.slice(0, 3).map((job) => (
-                      <div key={job.jobId || job.title} className="app-panel-soft rounded-[24px] p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div><div className="font-semibold text-white">{job.title}</div><div className="mt-1 text-sm text-slate-300">{job.company || "Benchmark role"}</div></div>
-                          <Chip value={`${job.finalScore}% fit`} tone="sky" />
-                        </div>
-                        <div className="mt-4 space-y-3">
-                          <ProgressRow label="Exact skill coverage" value={job.skillCoverageScore || 0} color="bg-sky-500" />
-                          <ProgressRow label="Experience alignment" value={job.experienceScore || 0} color="bg-amber-500" />
-                        </div>
-                        <div className="mt-4 text-sm leading-6 text-slate-300">{job.explanation?.[0] || "This role is one of the closest matches in the benchmark set."}</div>
-                      </div>
-                    )) : <div className="app-panel-soft rounded-[24px] p-4 text-sm text-slate-300">No benchmark roles available yet.</div>}
-                  </div>
-                </SectionCard>
-
-                <SectionCard title="Resume polish" subtitle="A few quick improvements that can strengthen the current resume immediately.">
-                  <div className="space-y-4">
-                    {weakestStatements.length ? weakestStatements.map((statement, index) => (
-                      <div key={`${statement.text}-${index}`} className="app-panel-soft rounded-[24px] p-4">
-                        <div className="flex flex-wrap gap-2">
-                          <Chip value={`${statement.overallScore}%`} tone="amber" />
-                          {(statement.flags || []).map((flag) => <Chip key={flag} value={flag.replace(/_/g, " ")} tone="rose" />)}
-                        </div>
-                        <p className="mt-3 text-sm leading-6 text-slate-200">{statement.text}</p>
-                        <p className="mt-3 text-sm leading-6 text-slate-300">{statement.suggestion}</p>
-                      </div>
-                    )) : <div className="app-panel-soft rounded-[24px] p-4 text-sm text-slate-300">No urgent resume writing issues were flagged in the current extract.</div>}
-                  </div>
-                </SectionCard>
-              </div>
-            </>
+            </div>
           )}
-        </main>
-      </div>
+
+        </div>
+      </main>
     </div>
   );
 }

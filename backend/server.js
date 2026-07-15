@@ -9,6 +9,7 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import analysisRoutes from "./routes/analysisRoutes.js";
 import dataRoutes from "./routes/dataRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import recruiterRoutes from "./routes/recruiterRoutes.js";
 import { ensureResearchDatasetsReady } from "./utils/datasetPipeline.js";
 
 
@@ -45,6 +46,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/analysis", analysisRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/report", reportRoutes);
+app.use("/api/recruiter", recruiterRoutes);
 
 
 // Server
