@@ -300,11 +300,4 @@ Frontend lint:
 - `cd frontend`
 - `npm run lint`
 
-## Additional Docs
 
-- `TECHNICAL_IMPLEMENTATION.md` for implementation details
-- `PROJECT_FUNCTIONALITY.md` for feature-by-feature behavior
-- `SYSTEM_EXPLANATION.md` for architecture and flow
-- `RESEARCH_METHODOLOGY.md` for the research/data perspective
-- `PLAIN_ENGLISH_GUIDE.md` for an easy non-technical explanation
-- `algorithms.md` for deeper algorithm notes
